@@ -184,42 +184,44 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
         </div>
     </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    // Validação de campos obrigatórios antes do envio
     $(document).ready(function () {
         $('form').on('submit', function (e) {
-            // Verifica se todos os campos obrigatórios estão preenchidos
             let camposObrigatorios = [
-                '#id_empresa', 
-                '#id_produto', 
-                '#id_setor', 
-                '#responsavel', 
-                '#quantidade', 
-                '#data_saida', 
-                '#numero_ticket', 
-                '#id_cidade', 
-                '#id_estado'
+                'select[name="id_empresa"]', 
+                'select[name="id_produto"]', 
+                'select[name="id_setor"]', 
+                'input[name="responsavel"]', 
+                'input[name="quantidade"]', 
+                'input[name="data_saida"]', 
+                'input[name="numero_ticket"]', 
+                'select[name="id_cidade"]', 
+                'select[name="id_estado"]'
             ];
 
             let vazio = false;
 
             camposObrigatorios.forEach(function (campo) {
-                const valor = $(campo).val();
-                if (!valor || valor.trim() === '') {
+                let elemento = $(campo);
+                let valor = elemento.val();
+
+                if (!valor || valor === "" || valor === null) {
                     vazio = true;
-                    $(campo).addClass('is-invalid'); // Adiciona estilo de erro no campo
+                    elemento.addClass('is-invalid');
                 } else {
-                    $(campo).removeClass('is-invalid'); // Remove estilo de erro, se houver
+                    elemento.removeClass('is-invalid');
                 }
             });
 
             if (vazio) {
-                e.preventDefault(); // Impede o envio do formulário
+                e.preventDefault();
                 alert('Por favor, preencha todos os campos obrigatórios.');
             }
         });
     });
 </script>
+
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script>
 </body>
