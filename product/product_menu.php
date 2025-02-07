@@ -27,7 +27,7 @@ try {
     $totalProdutos = $resultTotal->fetch_assoc()['total'];
 
     // Consulta para buscar os produtos
-    $sql = "SELECT * FROM produtos WHERE nome LIKE ? LIMIT ? OFFSET ?";
+    $sql = "SELECT * FROM produtos WHERE ativo = 1 AND nome LIKE ? LIMIT ? OFFSET ?";
     $stmt = $mysqli->prepare($sql);
     
     $limiteProdutos = LIMITE_PRODUTOS;
