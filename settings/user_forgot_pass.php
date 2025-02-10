@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->close();
 
         // Link para redefinição de senha
-        $reset_link = "http://127.0.0.1/centro_de_custos/reset_senha.php?token=$token";
+        $reset_link = "http://10.16.5.53/centro_de_custos/settings/user_reset_pass.php?token=$token";
 
         // Configuração do PHPMailer
         $mail = new PHPMailer(true);
