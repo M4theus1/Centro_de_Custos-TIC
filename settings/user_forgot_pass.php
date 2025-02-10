@@ -1,11 +1,15 @@
 <?php
 session_start();
 include(__DIR__ . '/../config/config.php');
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require __DIR__ . '/../vendor/autoload.php'; // PHPMailer carregado corretamente
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = trim($_POST['email']);
 
-    // Verificar se o e-mail existe
+    // Verificar se o e-mail existe no banco
     $stmt = $mysqli->prepare("SELECT id FROM usuarios WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -14,25 +18,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $stmt->close();
 
     if ($usuario) {
-        // Gerar token único
+        // Gerar token único e definir validade
         $token = bin2hex(random_bytes(50));
         $expiracao = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-        // Salvar token no banco
+        // Salvar token no banco de dados
         $stmt = $mysqli->prepare("UPDATE usuarios SET reset_token = ?, reset_expiracao = ? WHERE email = ?");
         $stmt->bind_param("sss", $token, $expiracao, $email);
         $stmt->execute();
         $stmt->close();
 
-        // Enviar e-mail com o link de redefinição
-        $reset_link = "http://seusite.com/resetar_senha.php?token=$token";
-        $subject = "Redefinição de Senha";
-        $message = "Clique no link para redefinir sua senha: $reset_link";
-        $headers = "From: noreply@seusite.com";
+        // Link para redefinição de senha
+        $reset_link = "http://127.0.0.1/centro_de_custos/reset_senha.php?token=$token";
 
-        mail($email, $subject, $message, $headers);
+        // Configuração do PHPMailer
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com'; // Servidor SMTP do Gmail
+            $mail->SMTPAuth = true;
+            $mail->Username = 'matheus.alves@dteltelecom.psi.br'; // E-mail de envio
+            $mail->Password = 'ecrq ncae sbqg ksay'; // Senha de aplicativo do Gmail
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
 
-        echo "<script>alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.'); window.location.href='index.php';</script>";
+            // Configuração do e-mail
+            $mail->setFrom('matheus.alves@dteltelecom.psi.br', 'Matheus da Silva Alves');
+            $mail->addAddress($email); // Destinatário
+            $mail->Subject = 'Redefinição de Senha';
+            $mail->Body = "Clique no link para redefinir sua senha: $reset_link";
+
+            // Enviar e-mail
+            $mail->send();
+            echo "<script>alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.'); window.location.href='/centro_de_custos/index.php';</script>";
+        } catch (Exception $e) {
+            echo "<script>alert('Erro ao enviar e-mail: {$mail->ErrorInfo}');</script>";
+        }
     } else {
         echo "<script>alert('E-mail não encontrado.');</script>";
     }
