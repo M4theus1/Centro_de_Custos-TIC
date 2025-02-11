@@ -149,7 +149,7 @@ $query_fornecedores = $mysqli->query("SELECT id, nome FROM fornecedores WHERE at
                         </div>
                         <div class="mb-3">
                             <label for="nf" class="form-label">Nota Fiscal</label>
-                            <input type="text" class="form-control" name="nf">
+                            <input type="file" class="form-control" name="nf" id-="nf" accept=".pdf,.docx">
                         </div>
                         <div class="mb-3">
                             <label for="observacao" class="form-label">Observações</label>
