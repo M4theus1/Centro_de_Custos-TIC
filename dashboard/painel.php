@@ -59,15 +59,8 @@ include('C:/xampp/htdocs/centro_de_custos/protect/protect.php');
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar">
-        <a href="/centro_de_custos/dashboard/painel.php">Dashboard</a>
-        <a href="/centro_de_custos/product/product_menu.php">Produtos</a>
-        <a href="/centro_de_custos/settings/supplier_menu.php">Fornecedores</a>
-        <a href="/centro_de_custos/settings/user_menu.php">Usuários</a>
-        <a href="/centro_de_custos/settings/enterprise_menu.php">Empresas</a>
-        <a href="/centro_de_custos/settings/state_menu.php">Configurações</a>
-        <a href="/centro_de_custos/dashboard/logout.php">Sair</a>
-    </div>
+    <?php include('C:/xampp/htdocs/centro_de_custos/sidebar.php'); ?>
+
 
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
