@@ -87,6 +87,7 @@ try {
                         <a class="dropdown-item" href="/centro_de_custos/product/product_menu.php">Produto</a>
                         <a class="dropdown-item" href="/centro_de_custos/product/product_entry.php">Entrada</a> 
                         <a class="dropdown-item" href="/centro_de_custos/product/product_departure.php">Saída</a>
+                        <a class="dropdown-item" href="/centro_de_custos/product/product_rel_entry.php">Rel. de Entrada</a>
                     </div>
                 </li>
                 <li class="nav-item">

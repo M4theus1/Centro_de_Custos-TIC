@@ -14,18 +14,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id_produto = $_POST['id_produto'];
     $id_fornecedor = $_POST['id_fornecedor'];
     $quantidade = (int) $_POST['quantidade'];
-    $valor_unitario = (float) $_POST['valor_unitario'];
-    $frete = !empty($_POST['frete']) ? (float) $_POST['frete'] : 0;
-    $valor_total = (float) $_POST['valor_total'];
+    $valor_unitario = (float) str_replace(',', '.', $_POST['valor_unitario']);
+    $frete = !empty($_POST['frete']) ? (float) str_replace(',', '.', $_POST['frete']) : 0;
+    $valor_total = (float) str_replace(',', '.', $_POST['valor_total']);
     $data_entrada = $_POST['data_entrada'];
     $observacao = $_POST['observacao'];
 
     // Definição do tamanho máximo permitido (2MB)
     $tamanho_maximo = 2 * 1024 * 1024; // 2MB em bytes
 
-    // Variável para armazenar o conteúdo do arquivo
-    $nf = NULL;
-    $tipo_nf = NULL;
+    // Variável para armazenar o caminho do arquivo
+    $caminho_nf = NULL;
 
     // Processamento do arquivo da Nota Fiscal
     if (!empty($_FILES['nf']['name'])) {
@@ -51,9 +50,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit();
         }
 
-        // Lê o conteúdo do arquivo
-        $nf = file_get_contents($arquivo_tmp);
-        $tipo_nf = $_FILES['nf']['type']; // Armazena o tipo MIME do arquivo
+        // Cria o diretório de uploads se não existir
+        $uploadDir = __DIR__ . '/../uploads'; // Ajuste o caminho conforme necessário
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        // Gera um nome único para o arquivo
+        $nome_unico = uniqid('nf_', true) . '_' . basename($arquivo_nome); // Gera um nome único com prefixo 'nf_'
+        $caminho_nf = $uploadDir . '/' . $nome_unico;
+
+        // Move o arquivo para o diretório de uploads
+        if (!move_uploaded_file($arquivo_tmp, $caminho_nf)) {
+            $_SESSION['error'] = "Erro ao mover o arquivo para o diretório de uploads. Verifique as permissões.";
+            header("Location: product_entry.php");
+            exit();
+        }
     }
 
     // Validação básica
@@ -68,33 +80,73 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     try {
         // Inserção dos dados na tabela 'entrada_produto'
-        $query_entrada_produto = "INSERT INTO entrada_produto (id_empresa, id_produto, id_fornecedor, quantidade, valor_unitario, frete, valor_total, data_entrada, nf, tipo_nf, observacao) 
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $query_entrada_produto = "INSERT INTO entrada_produto (id_empresa, id_produto, id_fornecedor, quantidade, valor_unitario, frete, valor_total, data_entrada, nf, observacao) 
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt_entrada_produto = $mysqli->prepare($query_entrada_produto);
         if (!$stmt_entrada_produto) {
             throw new Exception('Erro na preparação da consulta para entrada_produto: ' . $mysqli->error);
         }
 
-        $stmt_entrada_produto->bind_param('iiidddssbss', 
+        $stmt_entrada_produto->bind_param('iiidddssss', 
             $id_empresa, $id_produto, $id_fornecedor, $quantidade, $valor_unitario, $frete, $valor_total, 
-            $data_entrada, $nf, $tipo_nf, $observacao
+            $data_entrada, $caminho_nf, $observacao
         );
 
-        // Vincula o arquivo binário
-        $stmt_entrada_produto->send_long_data(8, $nf);
         $stmt_entrada_produto->execute();
         $stmt_entrada_produto->close();
+
+        // Verifica se o produto já existe no estoque
+        $query_estoque = "SELECT id_estoque, quantidade FROM estoque WHERE id_empresa = ? AND id_produto = ?";
+        $stmt_estoque = $mysqli->prepare($query_estoque);
+        if (!$stmt_estoque) {
+            throw new Exception('Erro na preparação da consulta para estoque: ' . $mysqli->error);
+        }
+
+        $stmt_estoque->bind_param('ii', $id_empresa, $id_produto);
+        $stmt_estoque->execute();
+        $stmt_estoque->store_result();
+
+        if ($stmt_estoque->num_rows > 0) {
+            // Produto já existe no estoque: atualiza a quantidade
+            $stmt_estoque->bind_result($id_estoque, $quantidade_atual);
+            $stmt_estoque->fetch();
+
+            $nova_quantidade = $quantidade_atual + $quantidade;
+
+            $query_update_estoque = "UPDATE estoque SET quantidade = ? WHERE id_estoque = ?";
+            $stmt_update_estoque = $mysqli->prepare($query_update_estoque);
+            if (!$stmt_update_estoque) {
+                throw new Exception('Erro na preparação da consulta para atualizar estoque: ' . $mysqli->error);
+            }
+
+            $stmt_update_estoque->bind_param('ii', $nova_quantidade, $id_estoque);
+            $stmt_update_estoque->execute();
+            $stmt_update_estoque->close();
+        } else {
+            // Produto não existe no estoque: insere um novo registro
+            $query_insert_estoque = "INSERT INTO estoque (id_empresa, id_produto, quantidade) VALUES (?, ?, ?)";
+            $stmt_insert_estoque = $mysqli->prepare($query_insert_estoque);
+            if (!$stmt_insert_estoque) {
+                throw new Exception('Erro na preparação da consulta para inserir estoque: ' . $mysqli->error);
+            }
+
+            $stmt_insert_estoque->bind_param('iii', $id_empresa, $id_produto, $quantidade);
+            $stmt_insert_estoque->execute();
+            $stmt_insert_estoque->close();
+        }
+
+        $stmt_estoque->close();
 
         // Commit da transação
         $mysqli->commit();
 
-        $_SESSION['success'] = 'Entrada de produto registrada com sucesso!';
+        $_SESSION['success'] = 'Entrada de produto registrada com sucesso e estoque atualizado!';
         header("Location: product_entry.php");
         exit();
     } catch (Exception $e) {
         // Se algo der errado, desfaz a transação
         $mysqli->rollback();
-        $_SESSION['error'] = 'Erro ao registrar a entrada de produto: ' . $e->getMessage();
+        $_SESSION['error'] = 'Erro ao registrar a entrada de produto: ' . htmlspecialchars($e->getMessage());
         header("Location: product_entry.php");
         exit();
     }

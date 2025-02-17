@@ -2,8 +2,14 @@
 session_start();
 include(__DIR__ . '/../config/config.php');
 
+// Verifica e cria a pasta de uploads se não existir
+$uploadDir = __DIR__ . '/uploads';
+if (!file_exists($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
+}
+
 // Carrega os dados necessários para os dropdowns
-$query_empresas = $mysqli->query("SELECT id, nome FROM empresas WHERE ativo=1" );
+$query_empresas = $mysqli->query("SELECT id, nome FROM empresas WHERE ativo=1");
 $query_produtos = $mysqli->query("SELECT id, nome FROM produtos");
 $query_fornecedores = $mysqli->query("SELECT id, nome FROM fornecedores WHERE ativo=1");
 ?>
@@ -87,7 +93,23 @@ $query_fornecedores = $mysqli->query("SELECT id, nome FROM fornecedores WHERE at
             <div class="col-lg-8 col-md-10 col-sm-12">
                 <div class="form-container">
                     <h1 class="form-title text-center">Cadastro de Entrada de Produto</h1>
-                    <form method="POST" action="product_entry_handler.php">
+
+                    <!-- Exibe mensagens de sucesso ou erro -->
+                    <?php if (isset($_SESSION['success'])): ?>
+                        <div class="alert alert-success">
+                            <?= $_SESSION['success'] ?>
+                        </div>
+                        <?php unset($_SESSION['success']); ?>
+                    <?php endif; ?>
+
+                    <?php if (isset($_SESSION['error'])): ?>
+                        <div class="alert alert-danger">
+                            <?= $_SESSION['error'] ?>
+                        </div>
+                        <?php unset($_SESSION['error']); ?>
+                    <?php endif; ?>
+
+                    <form method="POST" action="product_entry_handler.php" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label for="id_empresa" class="form-label">Empresa</label>
                             <select class="form-select" name="id_empresa" required>
@@ -149,7 +171,7 @@ $query_fornecedores = $mysqli->query("SELECT id, nome FROM fornecedores WHERE at
                         </div>
                         <div class="mb-3">
                             <label for="nf" class="form-label">Nota Fiscal</label>
-                            <input type="file" class="form-control" name="nf" id-="nf" accept=".pdf,.docx">
+                            <input type="file" class="form-control" name="nf" id="nf" accept=".pdf,.docx">
                         </div>
                         <div class="mb-3">
                             <label for="observacao" class="form-label">Observações</label>
