@@ -11,6 +11,7 @@
         <a href="/centro_de_custos/product/product_entry.php">Entrada</a>
         <a href="/centro_de_custos/product/product_departure.php">Saída</a>
         <a href="/centro_de_custos/product/product_rel_entry.php">Rel. Entradas</a>
+        <a href="/centro_de_custos/product/product_rel_departure.php">Rel. Saídas</a>
     </div>
 
     <a href="/centro_de_custos/settings/supplier_menu.php">Fornecedores</a>

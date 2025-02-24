@@ -74,136 +74,149 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
     <!-- Sidebar -->
     <?php include(__DIR__ . '/../sidebar.php'); ?>
 
-        <div class="container mt-5">
-            <div class="row justify-content-center">
-                <div class="col-lg-8 col-md-10 col-sm-12">
-                    <div class="form-container">
-                        <h1 class="form-title text-center">Saída de Produto</h1>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10 col-sm-12">
+                <div class="form-container">
+                    <h1 class="form-title text-center">Saída de Produto</h1>
 
-                        <!-- Exibe mensagens de sucesso ou erro -->
-                        <?php if (isset($_SESSION['success'])): ?>
-                            <div class="alert alert-success">
-                                <?= $_SESSION['success'] ?>
-                            </div>
-                            <?php unset($_SESSION['success']); ?>
-                        <?php endif; ?>
+                    <!-- Exibe mensagens de sucesso ou erro -->
+                    <?php if (isset($_SESSION['success'])): ?>
+                        <div class="alert alert-success">
+                            <?= $_SESSION['success'] ?>
+                        </div>
+                        <?php unset($_SESSION['success']); ?>
+                    <?php endif; ?>
 
-                        <?php if (isset($_SESSION['error'])): ?>
-                            <div class="alert alert-danger">
-                                <?= $_SESSION['error'] ?>
-                            </div>
-                            <?php unset($_SESSION['error']); ?>
-                        <?php endif; ?>
+                    <?php if (isset($_SESSION['error'])): ?>
+                        <div class="alert alert-danger">
+                            <?= $_SESSION['error'] ?>
+                        </div>
+                        <?php unset($_SESSION['error']); ?>
+                    <?php endif; ?>
 
-                        <form method="POST" action="product_departure_handler.php">
-                            <!-- Empresa -->
-                            <div class="mb-3">
-                                <label for="id_empresa" class="form-label">Empresa</label>
-                                <select class="form-select" name="id_empresa" required>
-                                    <option value="">Selecione a empresa</option>
-                                    <?php while ($empresa = $query_empresas->fetch_assoc()): ?>
-                                        <option value="<?= $empresa['id'] ?>"><?= $empresa['nome'] ?></option>
-                                    <?php endwhile; ?>
-                                </select>
-                            </div>
+                    <form method="POST" action="product_departure_handler.php">
+                        <!-- Empresa de Origem -->
+                        <div class="mb-3">
+                            <label for="id_empresa_origem" class="form-label">Empresa de Origem</label>
+                            <select class="form-select" name="id_empresa_origem" required>
+                                <option value="">Selecione a empresa de origem</option>
+                                <?php while ($empresa = $query_empresas->fetch_assoc()): ?>
+                                    <option value="<?= $empresa['id'] ?>"><?= $empresa['nome'] ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
 
-                            <!-- Produto -->
-                            <div class="mb-3">
-                                <label for="id_produto" class="form-label">Produto</label>
-                                <select class="form-select" name="id_produto" required>
-                                    <option value="">Selecione o produto</option>
-                                    <?php while ($produto = $query_produtos->fetch_assoc()): ?>
-                                        <option value="<?= $produto['id'] ?>"><?= $produto['nome'] ?></option>
-                                    <?php endwhile; ?>
-                                </select>
-                            </div>
+                        <!-- Empresa de Destino -->
+                        <div class="mb-3">
+                            <label for="id_empresa_destino" class="form-label">Empresa de Destino</label>
+                            <select class="form-select" name="id_empresa_destino" required>
+                                <option value="">Selecione a empresa de destino</option>
+                                <?php $query_empresas->data_seek(0); // Reinicia o ponteiro do resultado ?>
+                                <?php while ($empresa = $query_empresas->fetch_assoc()): ?>
+                                    <option value="<?= $empresa['id'] ?>"><?= $empresa['nome'] ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
 
-                            <!-- Setor -->
-                            <div class="mb-3">
-                                <label for="id_setor" class="form-label">Setor</label>
-                                <select class="form-select" name="id_setor" required>
-                                    <option value="">Selecione o setor</option>
-                                    <?php while ($setor = $query_setores->fetch_assoc()): ?>
-                                        <option value="<?= $setor['id'] ?>"><?= $setor['nome'] ?></option>
-                                    <?php endwhile; ?>
-                                </select>
-                            </div>
+                        <!-- Produto -->
+                        <div class="mb-3">
+                            <label for="id_produto" class="form-label">Produto</label>
+                            <select class="form-select" name="id_produto" required>
+                                <option value="">Selecione o produto</option>
+                                <?php while ($produto = $query_produtos->fetch_assoc()): ?>
+                                    <option value="<?= $produto['id'] ?>"><?= $produto['nome'] ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
 
-                            <!-- Responsável -->
-                            <div class="mb-3">
-                                <label for="responsavel" class="form-label">Responsável</label>
-                                <input type="text" class="form-control" name="responsavel" required>
-                            </div>
+                        <!-- Setor -->
+                        <div class="mb-3">
+                            <label for="id_setor" class="form-label">Setor</label>
+                            <select class="form-select" name="id_setor" required>
+                                <option value="">Selecione o setor</option>
+                                <?php while ($setor = $query_setores->fetch_assoc()): ?>
+                                    <option value="<?= $setor['id'] ?>"><?= $setor['nome'] ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
 
-                            <!-- Quantidade -->
-                            <div class="mb-3">
-                                <label for="quantidade" class="form-label">Quantidade</label>
-                                <input type="number" class="form-control" name="quantidade" id="quantidade" min="1" required>
-                            </div>
+                        <!-- Responsável -->
+                        <div class="mb-3">
+                            <label for="responsavel" class="form-label">Responsável</label>
+                            <input type="text" class="form-control" name="responsavel" required>
+                        </div>
 
-                            <!-- Data de Saída -->
-                            <div class="mb-3">
-                                <label for="data_saida" class="form-label">Data de Saída</label>
-                                <input type="date" class="form-control" name="data_saida" value="<?= date('Y-m-d') ?>" required>
-                            </div>
+                        <!-- Quantidade -->
+                        <div class="mb-3">
+                            <label for="quantidade" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" name="quantidade" id="quantidade" min="1" required>
+                        </div>
 
-                            <!-- Número do Ticket -->
-                            <div class="mb-3">
-                                <label for="numero_ticket" class="form-label">Número do Ticket</label>
-                                <input type="text" class="form-control" name="numero_ticket" required>
-                            </div>
+                        <!-- Data de Saída -->
+                        <div class="mb-3">
+                            <label for="data_saida" class="form-label">Data de Saída</label>
+                            <input type="date" class="form-control" name="data_saida" value="<?= date('Y-m-d') ?>" required>
+                        </div>
 
-                            <!-- Cidade -->
-                            <div class="mb-3">
-                                <label for="id_cidade" class="form-label">Cidade</label>
-                                <select class="form-select" name="id_cidade" required>
-                                    <option value="">Selecione a cidade</option>
-                                    <?php while ($cidade = $query_cidades->fetch_assoc()): ?>
-                                        <option value="<?= $cidade['id'] ?>"><?= $cidade['nome'] ?></option>
-                                    <?php endwhile; ?>
-                                </select>
-                            </div>
+                        <!-- Número do Ticket -->
+                        <div class="mb-3">
+                            <label for="numero_ticket" class="form-label">Número do Ticket</label>
+                            <input type="text" class="form-control" name="numero_ticket" required>
+                        </div>
 
-                            <!-- Estado -->
-                            <div class="mb-3">
-                                <label for="id_estado" class="form-label">Estado</label>
-                                <select class="form-select" name="id_estado" required>
-                                    <option value="">Selecione o estado</option>
-                                    <?php while ($estado = $query_estados->fetch_assoc()): ?>
-                                        <option value="<?= $estado['id'] ?>"><?= $estado['nome'] ?></option>
-                                    <?php endwhile; ?>
-                                </select>
-                            </div>
+                        <!-- Cidade -->
+                        <div class="mb-3">
+                            <label for="id_cidade" class="form-label">Cidade</label>
+                            <select class="form-select" name="id_cidade" required>
+                                <option value="">Selecione a cidade</option>
+                                <?php while ($cidade = $query_cidades->fetch_assoc()): ?>
+                                    <option value="<?= $cidade['id'] ?>"><?= $cidade['nome'] ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
 
-                            <!-- Observações -->
-                            <div class="mb-3">
-                                <label for="observacao" class="form-label">Observações</label>
-                                <textarea class="form-control" name="observacao" rows="3"></textarea>
-                            </div>
+                        <!-- Estado -->
+                        <div class="mb-3">
+                            <label for="id_estado" class="form-label">Estado</label>
+                            <select class="form-select" name="id_estado" required>
+                                <option value="">Selecione o estado</option>
+                                <?php while ($estado = $query_estados->fetch_assoc()): ?>
+                                    <option value="<?= $estado['id'] ?>"><?= $estado['nome'] ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
 
-                            <!-- Botões -->
-                            <div class="d-flex justify-content-between">
-                                <a href="/centro_de_custos/dashboard/painel.php" class="btn btn-secondary">Voltar</a>
-                                <button type="submit" class="btn btn-primary">Registrar Saída</button>
-                            </div>
-                        </form>
-                    </div>
+                        <!-- Observações -->
+                        <div class="mb-3">
+                            <label for="observacao" class="form-label">Observações</label>
+                            <textarea class="form-control" name="observacao" rows="3"></textarea>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-between">
+                            <a href="/centro_de_custos/dashboard/painel.php" class="btn btn-secondary">Voltar</a>
+                            <button type="submit" class="btn btn-primary">Registrar Saída</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function () {
             $('form').on('submit', function (e) {
                 let camposObrigatorios = [
-                    'select[name="id_empresa"]', 
-                    'select[name="id_produto"]', 
-                    'select[name="id_setor"]', 
-                    'input[name="responsavel"]', 
-                    'input[name="quantidade"]', 
-                    'input[name="data_saida"]', 
-                    'input[name="numero_ticket"]', 
-                    'select[name="id_cidade"]', 
+                    'select[name="id_empresa_origem"]',
+                    'select[name="id_empresa_destino"]',
+                    'select[name="id_produto"]',
+                    'select[name="id_setor"]',
+                    'input[name="responsavel"]',
+                    'input[name="quantidade"]',
+                    'input[name="data_saida"]',
+                    'input[name="numero_ticket"]',
+                    'select[name="id_cidade"]',
                     'select[name="id_estado"]'
                 ];
 

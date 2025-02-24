@@ -1,4 +1,4 @@
-<?php
+<?php 
 include(__DIR__ . '/../config/config.php');
 
 // Definir variáveis para o filtro de datas
@@ -10,52 +10,98 @@ $registros_por_pagina = 10;
 $pagina_atual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
 $offset = ($pagina_atual - 1) * $registros_por_pagina;
 
-// Consulta SQL base com filtro de datas e ordenação por data_entrada DESC
-$sql = "SELECT e.id_empresa, emp.nome AS empresa, p.nome AS produto, f.nome AS fornecedor, 
-               e.quantidade, e.valor_unitario, e.frete, e.valor_total, e.data_entrada, e.nf, e.observacao 
-        FROM entrada_produto e
-        JOIN empresas emp ON e.id_empresa = emp.id
-        JOIN produtos p ON e.id_produto = p.id
-        JOIN fornecedores f ON e.id_fornecedor = f.id
-        WHERE 1=1"; // Condição inicial para facilitar a adição de filtros
+// Consulta SQL base
+$sql = "SELECT s.id_saida, 
+       emp.nome AS empresa, 
+       p.nome AS produto, 
+       setr.nome AS setor, 
+       s.responsavel, 
+       s.quantidade, 
+       s.data_saida, 
+       s.numero_ticket, 
+       c.nome AS cidade, 
+       e.nome AS estado, 
+       s.observacao
+FROM saida_produto s
+JOIN empresas emp ON s.id_empresa = emp.id
+JOIN produtos p ON s.id_produto = p.id
+JOIN setores setr ON s.id_setor = setr.id
+JOIN cidades c ON s.id_cidade = c.id
+JOIN estados e ON s.id_estado = e.id
+WHERE 1=1"; // Facilita adição de filtros dinâmicos
+
+$params = [];
+$types = "";
 
 // Adicionar filtro de datas, se fornecido
 if (!empty($data_inicio) && !empty($data_fim)) {
-    $sql .= " AND e.data_entrada BETWEEN '$data_inicio' AND '$data_fim'";
+    $sql .= " AND s.data_saida BETWEEN ? AND ?";
+    $params[] = $data_inicio;
+    $params[] = $data_fim;
+    $types .= "ss";
 }
 
-//Ordenar por data_saída em ordem decrescente(DESC)
-$sql .= " ORDER BY e.data_entrada DESC";
+// Ordenação e paginação
+$sql .= " ORDER BY s.data_saida DESC, s.id_saida ASC LIMIT ? OFFSET ?";
+$params[] = $registros_por_pagina;
+$params[] = $offset;
+$types .= "ii";
 
-// Adicionar paginação
-$sql .= " LIMIT $registros_por_pagina OFFSET $offset";
 
-$result = $mysqli->query($sql);
-
-if (!$result) {
-    die("Erro na consulta: " . $mysqli->error);
+// Preparar a consulta SQL
+$stmt = $mysqli->prepare($sql);
+if ($stmt === false) {
+    die("Erro na preparação da consulta: " . $mysqli->error);
 }
 
-// Contagem total de registros para paginação (considerando o filtro de datas)
-$sql_total = "SELECT COUNT(*) AS total FROM entrada_produto e WHERE 1=1";
+// Vincular parâmetros
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+// Executar a consulta
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Contagem total de registros para paginação
+$sql_total = "SELECT COUNT(*) AS total FROM saida_produto s WHERE 1=1";
+$params_total = [];
+$types_total = "";
+
 if (!empty($data_inicio) && !empty($data_fim)) {
-    $sql_total .= " AND e.data_entrada BETWEEN '$data_inicio' AND '$data_fim'";
+    $sql_total .= " AND s.data_saida BETWEEN ? AND ?";
+    $params_total[] = $data_inicio;
+    $params_total[] = $data_fim;
+    $types_total .= "ss";
 }
-$result_total = $mysqli->query($sql_total);
+
+$stmt_total = $mysqli->prepare($sql_total);
+if ($stmt_total === false) {
+    die("Erro na preparação da consulta de contagem: " . $mysqli->error);
+}
+
+if (!empty($params_total)) {
+    $stmt_total->bind_param($types_total, ...$params_total);
+}
+
+$stmt_total->execute();
+$result_total = $stmt_total->get_result();
 $total_registros = $result_total->fetch_assoc()['total'];
-$total_paginas = ceil($total_registros / $registros_por_pagina);
+$total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
 ?>
+
 
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório de Entradas</title>
+    <title>Relatório de Saídas</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Incluir o colResizable -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/colresizable/1.6.0/colResizable.min.css">
+
     <style>
         /* Estilo para a tabela ter tamanho fixo */
         .table-fixed {
@@ -129,8 +175,8 @@ $total_paginas = ceil($total_registros / $registros_por_pagina);
     <!-- Sidebar -->
     <?php include(__DIR__ . '/../sidebar.php'); ?>
 
-    <div class="main-content">
-        <h1>Relatório de Entradas</h1>
+        <div class="main-content">
+        <h1>Relatório de Saídas</h1>
 
         <!-- Formulário de Filtro por Datas -->
         <form method="GET" action="" class="filter-form">
@@ -156,13 +202,13 @@ $total_paginas = ceil($total_registros / $registros_por_pagina);
                     <tr>
                         <th style="width: 10%;">Empresa</th>
                         <th style="width: 10%;">Produto</th>
-                        <th style="width: 10%;">Fornecedor</th>
+                        <th style="width: 10%;">Setor</th>
+                        <th style="width: 12%;">Responsável</th>
                         <th style="width: 8%;">Quantidade</th>
-                        <th style="width: 10%;">Valor Unitário</th>
-                        <th style="width: 8%;">Frete</th>
-                        <th style="width: 10%;">Valor Total</th>
-                        <th style="width: 10%;">Data Entrada</th>
-                        <th style="width: 10%;">Nota Fiscal</th>
+                        <th style="width: 10%;">Data Saída</th>
+                        <th style="width: 10%;">Número Ticket</th>
+                        <th style="width: 10%;">Cidade</th>
+                        <th style="width: 10%;">Estado</th>
                         <th style="width: 14%;">Observação</th>
                     </tr>
                 </thead>
@@ -171,13 +217,13 @@ $total_paginas = ceil($total_registros / $registros_por_pagina);
                         <tr>
                             <td><?php echo htmlspecialchars($row['empresa']); ?></td>
                             <td><?php echo htmlspecialchars($row['produto']); ?></td>
-                            <td><?php echo htmlspecialchars($row['fornecedor']); ?></td>
+                            <td><?php echo htmlspecialchars($row['setor']); ?></td>
+                            <td><?php echo htmlspecialchars($row['responsavel']); ?></td>
                             <td><?php echo htmlspecialchars($row['quantidade']); ?></td>
-                            <td>R$ <?php echo number_format($row['valor_unitario'], 2, ',', '.'); ?></td>
-                            <td>R$ <?php echo number_format($row['frete'], 2, ',', '.'); ?></td>
-                            <td>R$ <?php echo number_format($row['valor_total'], 2, ',', '.'); ?></td>
-                            <td><?php echo date('d/m/Y', strtotime($row['data_entrada'])); ?></td>
-                            <td><?php echo htmlspecialchars($row['nf']); ?></td>
+                            <td><?php echo date('d/m/Y', strtotime($row['data_saida'])); ?></td>
+                            <td><?php echo htmlspecialchars($row['numero_ticket']); ?></td>
+                            <td><?php echo htmlspecialchars($row['cidade']); ?></td>
+                            <td><?php echo htmlspecialchars($row['estado']); ?></td>
                             <td><?php echo nl2br(htmlspecialchars($row['observacao'])); ?></td>
                         </tr>
                     <?php endwhile; ?>
@@ -197,7 +243,7 @@ $total_paginas = ceil($total_registros / $registros_por_pagina);
         </nav>
     </div>
 
-    <!-- Scripts -->
+        <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script>
     <!-- Incluir o colResizable -->
