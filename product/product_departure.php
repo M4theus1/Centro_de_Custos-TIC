@@ -64,9 +64,16 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
         .form-label {
             font-weight: bold;
         }
+        .form-label.required::after {
+            content: " *";
+            color: red;
+        }
         .btn-primary {
             background-color: #0d6efd;
             border-color: #0d6efd;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -96,9 +103,24 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
                     <?php endif; ?>
 
                     <form method="POST" action="product_departure_handler.php">
+                        <!-- Transferência de Estoque -->
+                        <div class="mb-3">
+                            <label class="form-label required">Haverá transferência de estoque?</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="transferencia_estoque" id="transferencia_sim" value="1" required>
+                                    <label class="form-check-label" for="transferencia_sim">Sim</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="transferencia_estoque" id="transferencia_nao" value="0" required>
+                                    <label class="form-check-label" for="transferencia_nao">Não</label>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Empresa de Origem -->
                         <div class="mb-3">
-                            <label for="id_empresa_origem" class="form-label">Empresa de Origem</label>
+                            <label for="id_empresa_origem" class="form-label required">Empresa de Origem</label>
                             <select class="form-select" name="id_empresa_origem" required>
                                 <option value="">Selecione a empresa de origem</option>
                                 <?php while ($empresa = $query_empresas->fetch_assoc()): ?>
@@ -107,10 +129,10 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
                             </select>
                         </div>
 
-                        <!-- Empresa de Destino -->
-                        <div class="mb-3">
-                            <label for="id_empresa_destino" class="form-label">Empresa de Destino</label>
-                            <select class="form-select" name="id_empresa_destino" required>
+                        <!-- Empresa de Destino (condicional) -->
+                        <div class="mb-3 hidden" id="empresa_destino_container">
+                            <label for="id_empresa_destino" class="form-label required">Empresa de Destino</label>
+                            <select class="form-select" name="id_empresa_destino">
                                 <option value="">Selecione a empresa de destino</option>
                                 <?php $query_empresas->data_seek(0); // Reinicia o ponteiro do resultado ?>
                                 <?php while ($empresa = $query_empresas->fetch_assoc()): ?>
@@ -121,7 +143,7 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
 
                         <!-- Produto -->
                         <div class="mb-3">
-                            <label for="id_produto" class="form-label">Produto</label>
+                            <label for="id_produto" class="form-label required">Produto</label>
                             <select class="form-select" name="id_produto" required>
                                 <option value="">Selecione o produto</option>
                                 <?php while ($produto = $query_produtos->fetch_assoc()): ?>
@@ -132,7 +154,7 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
 
                         <!-- Setor -->
                         <div class="mb-3">
-                            <label for="id_setor" class="form-label">Setor</label>
+                            <label for="id_setor" class="form-label required">Setor</label>
                             <select class="form-select" name="id_setor" required>
                                 <option value="">Selecione o setor</option>
                                 <?php while ($setor = $query_setores->fetch_assoc()): ?>
@@ -143,31 +165,31 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
 
                         <!-- Responsável -->
                         <div class="mb-3">
-                            <label for="responsavel" class="form-label">Responsável</label>
+                            <label for="responsavel" class="form-label required">Responsável</label>
                             <input type="text" class="form-control" name="responsavel" required>
                         </div>
 
                         <!-- Quantidade -->
                         <div class="mb-3">
-                            <label for="quantidade" class="form-label">Quantidade</label>
+                            <label for="quantidade" class="form-label required">Quantidade</label>
                             <input type="number" class="form-control" name="quantidade" id="quantidade" min="1" required>
                         </div>
 
                         <!-- Data de Saída -->
                         <div class="mb-3">
-                            <label for="data_saida" class="form-label">Data de Saída</label>
+                            <label for="data_saida" class="form-label required">Data de Saída</label>
                             <input type="date" class="form-control" name="data_saida" value="<?= date('Y-m-d') ?>" required>
                         </div>
 
                         <!-- Número do Ticket -->
                         <div class="mb-3">
-                            <label for="numero_ticket" class="form-label">Número do Ticket</label>
+                            <label for="numero_ticket" class="form-label required">Número do Ticket</label>
                             <input type="text" class="form-control" name="numero_ticket" required>
                         </div>
 
                         <!-- Cidade -->
                         <div class="mb-3">
-                            <label for="id_cidade" class="form-label">Cidade</label>
+                            <label for="id_cidade" class="form-label required">Cidade</label>
                             <select class="form-select" name="id_cidade" required>
                                 <option value="">Selecione a cidade</option>
                                 <?php while ($cidade = $query_cidades->fetch_assoc()): ?>
@@ -178,7 +200,7 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
 
                         <!-- Estado -->
                         <div class="mb-3">
-                            <label for="id_estado" class="form-label">Estado</label>
+                            <label for="id_estado" class="form-label required">Estado</label>
                             <select class="form-select" name="id_estado" required>
                                 <option value="">Selecione o estado</option>
                                 <?php while ($estado = $query_estados->fetch_assoc()): ?>
@@ -206,10 +228,21 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Mostra ou oculta o campo de empresa de destino
+            $('input[name="transferencia_estoque"]').on('change', function () {
+                if ($('#transferencia_sim').is(':checked')) {
+                    $('#empresa_destino_container').removeClass('hidden');
+                    $('select[name="id_empresa_destino"]').attr('required', true);
+                } else {
+                    $('#empresa_destino_container').addClass('hidden');
+                    $('select[name="id_empresa_destino"]').attr('required', false);
+                }
+            });
+
+            // Validação dos campos obrigatórios
             $('form').on('submit', function (e) {
                 let camposObrigatorios = [
                     'select[name="id_empresa_origem"]',
-                    'select[name="id_empresa_destino"]',
                     'select[name="id_produto"]',
                     'select[name="id_setor"]',
                     'input[name="responsavel"]',
@@ -219,6 +252,10 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
                     'select[name="id_cidade"]',
                     'select[name="id_estado"]'
                 ];
+
+                if ($('#transferencia_sim').is(':checked')) {
+                    camposObrigatorios.push('select[name="id_empresa_destino"]');
+                }
 
                 let vazio = false;
 

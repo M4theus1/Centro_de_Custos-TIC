@@ -11,24 +11,29 @@ $pagina_atual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
 $offset = ($pagina_atual - 1) * $registros_por_pagina;
 
 // Consulta SQL base
-$sql = "SELECT s.id_saida, 
-       emp.nome AS empresa, 
-       p.nome AS produto, 
-       setr.nome AS setor, 
-       s.responsavel, 
-       s.quantidade, 
-       s.data_saida, 
-       s.numero_ticket, 
-       c.nome AS cidade, 
-       e.nome AS estado, 
-       s.observacao
-FROM saida_produto s
-JOIN empresas emp ON s.id_empresa = emp.id
-JOIN produtos p ON s.id_produto = p.id
-JOIN setores setr ON s.id_setor = setr.id
-JOIN cidades c ON s.id_cidade = c.id
-JOIN estados e ON s.id_estado = e.id
-WHERE 1=1"; // Facilita adição de filtros dinâmicos
+    $sql = "SELECT s.id_saida, 
+        emp.nome AS empresa, 
+        p.nome AS produto, 
+        ep.valor_unitario,  -- Buscando o valor unitário da tabela entrada_produto
+        setr.nome AS setor, 
+        s.responsavel, 
+        s.quantidade, 
+        s.data_saida, 
+        s.numero_ticket, 
+        c.nome AS cidade, 
+        e.nome AS estado, 
+        s.observacao,
+        (SELECT SUM(ep2.valor_unitario) 
+            FROM entrada_produto ep2 
+            WHERE ep2.id_produto = s.id_produto) AS soma_valor_unitario  -- Soma dos valores unitários por produto
+    FROM saida_produto s
+    JOIN empresas emp ON s.id_empresa = emp.id
+    JOIN produtos p ON s.id_produto = p.id
+    JOIN entrada_produto ep ON s.id_produto = ep.id_produto  -- JOIN com entrada_produto para buscar o valor_unitario
+    JOIN setores setr ON s.id_setor = setr.id
+    JOIN cidades c ON s.id_cidade = c.id
+    JOIN estados e ON s.id_estado = e.id
+    WHERE 1=1";
 
 $params = [];
 $types = "";
@@ -88,8 +93,36 @@ $stmt_total->execute();
 $result_total = $stmt_total->get_result();
 $total_registros = $result_total->fetch_assoc()['total'];
 $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
-?>
 
+// Consulta para calcular o valor total de saídas por mês
+$sql_total_mes = "SELECT 
+                    DATE_FORMAT(s.data_saida, '%Y-%m') AS mes, 
+                    SUM(ep.valor_unitario * s.quantidade) AS total_mes
+                  FROM saida_produto s
+                  JOIN entrada_produto ep ON s.id_produto = ep.id_produto
+                  WHERE 1=1";
+
+// Adicionar filtro de datas, se fornecido
+if (!empty($data_inicio) && !empty($data_fim)) {
+    $sql_total_mes .= " AND s.data_saida BETWEEN ? AND ?";
+}
+
+$sql_total_mes .= " GROUP BY DATE_FORMAT(s.data_saida, '%Y-%m')
+                    ORDER BY mes DESC";
+
+// Preparar e executar a consulta
+$stmt_total_mes = $mysqli->prepare($sql_total_mes);
+if ($stmt_total_mes === false) {
+    die("Erro na preparação da consulta de total por mês: " . $mysqli->error);
+}
+
+if (!empty($data_inicio) && !empty($data_fim)) {
+    $stmt_total_mes->bind_param("ss", $data_inicio, $data_fim);
+}
+
+$stmt_total_mes->execute();
+$result_total_mes = $stmt_total_mes->get_result();
+?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -141,7 +174,7 @@ $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
         .filter-form {
             margin-bottom: 20px;
         }
-                body {
+        body {
             background-color: #f8f9fa;
             display: flex;
         }
@@ -169,13 +202,23 @@ $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
             padding: 20px;
             width: calc(100% - 250px);
         }
+        /* Estilo para a tabela de totais por mês */
+        .table-totais {
+            margin-top: 20px;
+            width: 50%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .table-totais th, .table-totais td {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <!-- Sidebar -->
     <?php include(__DIR__ . '/../sidebar.php'); ?>
 
-        <div class="main-content">
+    <div class="main-content">
         <h1>Relatório de Saídas</h1>
 
         <!-- Formulário de Filtro por Datas -->
@@ -202,6 +245,7 @@ $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
                     <tr>
                         <th style="width: 10%;">Empresa</th>
                         <th style="width: 10%;">Produto</th>
+                        <th style="width: 8%;">Valor Unitário</th> <!-- Nova coluna -->
                         <th style="width: 10%;">Setor</th>
                         <th style="width: 12%;">Responsável</th>
                         <th style="width: 8%;">Quantidade</th>
@@ -217,6 +261,7 @@ $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
                         <tr>
                             <td><?php echo htmlspecialchars($row['empresa']); ?></td>
                             <td><?php echo htmlspecialchars($row['produto']); ?></td>
+                            <td>R$ <?php echo number_format($row['valor_unitario'], 2, ',', '.'); ?></td> <!-- Nova coluna -->
                             <td><?php echo htmlspecialchars($row['setor']); ?></td>
                             <td><?php echo htmlspecialchars($row['responsavel']); ?></td>
                             <td><?php echo htmlspecialchars($row['quantidade']); ?></td>
@@ -241,9 +286,30 @@ $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
                 <?php endfor; ?>
             </ul>
         </nav>
+
+        <!-- Seção para exibir o valor total de saídas por mês -->
+        <div class="mt-5">
+            <h2>Valor Total de Saídas por Mês</h2>
+            <table class="table table-bordered table-totais">
+                <thead>
+                    <tr>
+                        <th>Mês</th>
+                        <th>Valor Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($row_mes = $result_total_mes->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo date('m/Y', strtotime($row_mes['mes'] . '-01')); ?></td>
+                            <td>R$ <?php echo number_format($row_mes['total_mes'], 2, ',', '.'); ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-        <!-- Scripts -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous"></script>
     <!-- Incluir o colResizable -->
