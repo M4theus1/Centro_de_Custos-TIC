@@ -12,28 +12,29 @@ $offset = ($pagina_atual - 1) * $registros_por_pagina;
 
 // Consulta SQL base
     $sql = "SELECT s.id_saida, 
-        emp.nome AS empresa, 
-        p.nome AS produto, 
-        ep.valor_unitario,  -- Buscando o valor unitário da tabela entrada_produto
-        setr.nome AS setor, 
-        s.responsavel, 
-        s.quantidade, 
-        s.data_saida, 
-        s.numero_ticket, 
-        c.nome AS cidade, 
-        e.nome AS estado, 
-        s.observacao,
-        (SELECT SUM(ep2.valor_unitario) 
-            FROM entrada_produto ep2 
-            WHERE ep2.id_produto = s.id_produto) AS soma_valor_unitario  -- Soma dos valores unitários por produto
-    FROM saida_produto s
-    JOIN empresas emp ON s.id_empresa = emp.id
-    JOIN produtos p ON s.id_produto = p.id
-    JOIN entrada_produto ep ON s.id_produto = ep.id_produto  -- JOIN com entrada_produto para buscar o valor_unitario
-    JOIN setores setr ON s.id_setor = setr.id
-    JOIN cidades c ON s.id_cidade = c.id
-    JOIN estados e ON s.id_estado = e.id
-    WHERE 1=1";
+                emp.nome AS empresa, 
+                p.nome AS produto, 
+                (SELECT ep.valor_unitario 
+                FROM entrada_produto ep 
+                WHERE ep.id_produto = s.id_produto 
+                ORDER BY ep.id_entrada ASC  -- Obtém o primeiro valor registrado
+                LIMIT 1) AS valor_unitario,  
+                setr.nome AS setor, 
+                s.responsavel, 
+                s.quantidade, 
+                s.data_saida, 
+                s.numero_ticket, 
+                c.nome AS cidade, 
+                e.nome AS estado, 
+                s.observacao
+            FROM saida_produto s
+            JOIN empresas emp ON s.id_empresa = emp.id
+            JOIN produtos p ON s.id_produto = p.id
+            JOIN setores setr ON s.id_setor = setr.id
+            JOIN cidades c ON s.id_cidade = c.id
+            JOIN estados e ON s.id_estado = e.id
+            WHERE 1=1";
+
 
 $params = [];
 $types = "";
@@ -46,12 +47,11 @@ if (!empty($data_inicio) && !empty($data_fim)) {
     $types .= "ss";
 }
 
-// Ordenação e paginação
+// Adicionar paginação no final da consulta
 $sql .= " ORDER BY s.data_saida DESC, s.id_saida ASC LIMIT ? OFFSET ?";
 $params[] = $registros_por_pagina;
 $params[] = $offset;
 $types .= "ii";
-
 
 // Preparar a consulta SQL
 $stmt = $mysqli->prepare($sql);
@@ -97,9 +97,14 @@ $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
 // Consulta para calcular o valor total de saídas por mês
 $sql_total_mes = "SELECT 
                     DATE_FORMAT(s.data_saida, '%Y-%m') AS mes, 
-                    SUM(ep.valor_unitario * s.quantidade) AS total_mes
+                    SUM(s.quantidade * (
+                        SELECT ep.valor_unitario 
+                        FROM entrada_produto ep 
+                        WHERE ep.id_produto = s.id_produto 
+                        ORDER BY ep.id_entrada DESC 
+                        LIMIT 1
+                    )) AS total_mes
                   FROM saida_produto s
-                  JOIN entrada_produto ep ON s.id_produto = ep.id_produto
                   WHERE 1=1";
 
 // Adicionar filtro de datas, se fornecido
@@ -122,6 +127,7 @@ if (!empty($data_inicio) && !empty($data_fim)) {
 
 $stmt_total_mes->execute();
 $result_total_mes = $stmt_total_mes->get_result();
+
 ?>
 
 <!DOCTYPE html>
@@ -236,6 +242,11 @@ $result_total_mes = $stmt_total_mes->get_result();
                     <button type="submit" class="btn btn-primary" style="margin-top: 32px;">Filtrar</button>
                 </div>
             </div>
+
+            <a href="export_departure.php" class="btn btn-success">
+                <i class="fas fa-file-excel"></i>Exportar para Excel/CSV
+            </a>
+
         </form>
 
         <!-- Container da Tabela com Rolagem Horizontal -->
@@ -288,26 +299,30 @@ $result_total_mes = $stmt_total_mes->get_result();
         </nav>
 
         <!-- Seção para exibir o valor total de saídas por mês -->
-        <div class="mt-5">
-            <h2>Valor Total de Saídas por Mês</h2>
-            <table class="table table-bordered table-totais">
-                <thead>
-                    <tr>
-                        <th>Mês</th>
-                        <th>Valor Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php while ($row_mes = $result_total_mes->fetch_assoc()): ?>
+        <?php if ($result_total_mes->num_rows > 0): ?>
+            <div class="mt-5">
+                <h2>Valor Total de Saídas por Mês</h2>
+                <table class="table table-bordered table-totais">
+                    <thead>
                         <tr>
-                            <td><?php echo date('m/Y', strtotime($row_mes['mes'] . '-01')); ?></td>
-                            <td>R$ <?php echo number_format($row_mes['total_mes'], 2, ',', '.'); ?></td>
+                            <th>Mês</th>
+                            <th>Valor Total</th>
                         </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                    </thead>
+                    <tbody>
+                        <?php while ($row_mes = $result_total_mes->fetch_assoc()): ?>
+                            <tr>
+                                <td><?php echo date('m/Y', strtotime($row_mes['mes'] . '-01')); ?></td>
+                                <td>R$ <?php echo number_format($row_mes['total_mes'], 2, ',', '.'); ?></td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <p>Nenhum registro encontrado para este período.</p>
+        <?php endif; ?>
+
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>

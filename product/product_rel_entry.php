@@ -146,6 +146,11 @@ $total_paginas = ceil($total_registros / $registros_por_pagina);
                 <div class="col-md-4">
                     <button type="submit" class="btn btn-primary" style="margin-top: 32px;">Filtrar</button>
                 </div>
+                <div class="col-md-4">
+                    <a href="export_entry.php" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i>Exportar para Excel/CSV
+                    </a>
+                </div>
             </div>
         </form>
 

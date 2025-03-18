@@ -14,6 +14,15 @@
         <a href="/centro_de_custos/product/product_rel_departure.php">Rel. Saídas</a>
     </div>
 
+        <!-- Produtos (Dropdown) -->
+    <button class="dropdown-btn">Manutenção - Smartphones
+        <i class="fas fa-caret-down"></i>
+    </button>
+    <div class="dropdown-container">
+        <a href="/centro_de_custos/smartphone_maintenance/maintenance_menu.php">Menu</a>
+        <a href="/centro_de_custos/smartphone_maintenance/maintenance_entry.php">Entrada</a>
+    </div>
+
     <a href="/centro_de_custos/settings/supplier_menu.php">Fornecedores</a>
     <a href="/centro_de_custos/settings/user_menu.php">Usuários</a>
 

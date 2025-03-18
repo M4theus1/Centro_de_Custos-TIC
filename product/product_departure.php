@@ -218,13 +218,14 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
                         <!-- Botões -->
                         <div class="d-flex justify-content-between">
                             <a href="/centro_de_custos/dashboard/painel.php" class="btn btn-secondary">Voltar</a>
-                            <button type="submit" class="btn btn-primary">Registrar Saída</button>
+                            <button type="button" class="btn btn-primary" id="submitButton">Registrar Saída</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function () {
@@ -278,5 +279,65 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
             });
         });
     </script>
+    <script>
+    $(document).ready(function () {
+        $('#submitButton').on('click', function () {
+            // Coletando os valores preenchidos
+            $('#modal_transferencia').text($('input[name="transferencia_estoque"]:checked').next('label').text());
+            $('#modal_empresa_origem').text($('select[name="id_empresa_origem"] option:selected').text());
+            $('#modal_empresa_destino').text($('select[name="id_empresa_destino"]').is(':visible') ? $('select[name="id_empresa_destino"] option:selected').text() : 'N/A');
+            $('#modal_produto').text($('select[name="id_produto"] option:selected').text());
+            $('#modal_setor').text($('select[name="id_setor"] option:selected').text());
+            $('#modal_responsavel').text($('input[name="responsavel"]').val());
+            $('#modal_quantidade').text($('input[name="quantidade"]').val());
+            $('#modal_data_saida').text($('input[name="data_saida"]').val());
+            $('#modal_ticket').text($('input[name="numero_ticket"]').val());
+            $('#modal_cidade').text($('select[name="id_cidade"] option:selected').text());
+            $('#modal_estado').text($('select[name="id_estado"] option:selected').text());
+            $('#modal_observacao').text($('textarea[name="observacao"]').val() || 'Sem observações');
+
+            // Exibir o modal
+            $('#confirmModal').modal('show');
+        });
+
+        // Se confirmado, submete o formulário
+        $('#confirmSubmit').on('click', function () {
+            $('form').submit();
+        });
+    });
+    </script>
+    <!-- Modal de Confirmação -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmModalLabel">Confirmação da Saída</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <h5 class="text-center">Saída de Produto</h5>
+                    <hr>
+                    <p><strong>Transferência de Estoque:</strong> <span id="modal_transferencia"></span></p>
+                    <p><strong>Empresa de Origem:</strong> <span id="modal_empresa_origem"></span></p>
+                    <p><strong>Empresa de Destino:</strong> <span id="modal_empresa_destino"></span></p>
+                    <p><strong>Produto:</strong> <span id="modal_produto"></span></p>
+                    <p><strong>Setor:</strong> <span id="modal_setor"></span></p>
+                    <p><strong>Responsável:</strong> <span id="modal_responsavel"></span></p>
+                    <p><strong>Quantidade:</strong> <span id="modal_quantidade"></span></p>
+                    <p><strong>Data de Saída:</strong> <span id="modal_data_saida"></span></p>
+                    <p><strong>Número do Ticket:</strong> <span id="modal_ticket"></span></p>
+                    <p><strong>Cidade:</strong> <span id="modal_cidade"></span></p>
+                    <p><strong>Estado:</strong> <span id="modal_estado"></span></p>
+                    <p><strong>Observações:</strong> <span id="modal_observacao"></span></p>
+                    <hr>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="confirmSubmit">Confirmar e Registrar</button>
+                    <button type="button" class="btn btn-primary" onclick="window.print()">Imprimir</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
