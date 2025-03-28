@@ -2,12 +2,10 @@
 session_start();
 include(__DIR__ . '/../config/config.php');
 
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-$dados = ['descricao_servico' => '', 'imei' => '', 'data_servico' => date('Y-m-d'), 'valor' => '', 'nota_fiscal' => ''];
-
-if ($id) {
-    $result = $mysqli->query("SELECT * FROM manutencao_celular WHERE id = $id");
-    $dados = $result->fetch_assoc();
+// Verifica e cria a pasta de uploads se não existir
+$uploadDir = __DIR__ . '/uploads';
+if (!file_exists($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
 }
 ?>
 
@@ -15,55 +13,108 @@ if ($id) {
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title><?= $id ? 'Editar' : 'Nova' ?> Manutenção</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrada de Manutenção</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .form-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .form-title {
+            font-weight: bold;
+            color: #343a40;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+        .form-label {
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
+    <?php include(__DIR__ . '/../sidebar.php'); ?>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10 col-sm-12">
+                <div class="form-container">
+                    <h1 class="form-title">Entrada de Manutenção</h1>
 
-    <!-- Sidebar -->
-    <?php include('C:/xampp/htdocs/centro_de_custos/sidebar.php'); ?>
-
-    <div class="container mt-5">
-        <h1 class="text-center"><?= $id ? 'Editar' : 'Nova' ?> Manutenção</h1>
-        <form method="POST" action="maintenance_entry_form.php">
-            <input type="hidden" name="id" value="<?= $id ?>">
-
-            <div class="mb-3">
-                <label class="form-label">Serviço Feito</label>
-                <input type="text" class="form-control" name="descricao_servico" value="<?= $dados['descricao_servico'] ?>" required>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">IMEI</label>
-                <input type="text" class="form-control" name="imei" value="<?= $dados['imei'] ?>" required>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Data</label>
-                <input type="date" class="form-control" name="data_servico" value="<?= $dados['data_servico'] ?>" required>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Valor</label>
-                <input type="text" class="form-control" name="valor" value="<?= $dados['valor'] ?>" required>
-            </div>
-
-            <form method="POST" action="manutencao_entry_form.php" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label class="form-label">Nota Fiscal (PDF ou Imagem)</label>
-                    <input type="file" class="form-control" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png">
-                    <?php if (!empty($dados['nota_fiscal'])): ?>
-                        <p>Arquivo atual: <a href="<?= $dados['nota_fiscal'] ?>" target="_blank">Ver Nota Fiscal</a></p>
+                    <!-- Exibe mensagens de sucesso ou erro -->
+                    <?php if (isset($_SESSION['success'])): ?>
+                        <div class="alert alert-success">
+                            <?= $_SESSION['success'] ?>
+                        </div>
+                        <?php unset($_SESSION['success']); ?>
                     <?php endif; ?>
-                </div>
-            </form>
 
-            <div class="d-flex justify-content-between">
-                <a href="maintenance_menu.php" class="btn btn-secondary">Voltar</a>
-                <button type="submit" class="btn btn-primary">Salvar</button>
+                    <?php if (isset($_SESSION['error'])): ?>
+                        <div class="alert alert-danger">
+                            <?= $_SESSION['error'] ?>
+                        </div>
+                        <?php unset($_SESSION['error']); ?>
+                    <?php endif; ?>
+
+                    <form method="POST" action="maintenance_entry_form.php" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="descricao_servico" class="form-label">Descrição do Serviço</label>
+                            <input type="text" class="form-control" name="descricao_servico" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="imei" class="form-label">IMEI do Aparelho</label>
+                            <input type="text" class="form-control" name="imei" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="data_servico" class="form-label">Data do Serviço</label>
+                                    <input type="date" class="form-control" name="data_servico" value="<?= date('Y-m-d') ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="valor" class="form-label">Valor</label>
+                                    <input type="text" class="form-control" name="valor" id="valor" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nota_fiscal" class="form-label">Nota Fiscal (Opcional)</label>
+                            <input type="file" class="form-control" name="nota_fiscal" accept=".pdf,.jpg,.png">
+                        </div>
+                        <div class="mb-3">
+                            <label for="observacao" class="form-label">Observações</label>
+                            <textarea class="form-control" name="observacao" rows="3"></textarea>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="/centro_de_custos/dashboard/painel.php" class="btn btn-secondary">Voltar</a>
+                            <button type="submit" class="btn btn-primary">Registrar Manutenção</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
+
+    <!-- Script para formatação de valores -->
+    <script>
+        $(document).ready(function () {
+            $('#valor').on('input', function () {
+                let valor = $(this).val().replace(',', '.');
+                $(this).val(valor);
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

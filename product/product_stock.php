@@ -1,11 +1,10 @@
 <?php
 include(__DIR__ . '/../config/config.php');
 
-$itens_por_pagina = 10; // Define o número de itens por página
+$itens_por_pagina = 10;
 $pagina_atual = isset($_GET['pagina']) ? (int) $_GET['pagina'] : 1;
 $inicio = ($pagina_atual - 1) * $itens_por_pagina;
 
-// Filtragem da pesquisa
 $termo_pesquisa = isset($_GET['pesquisa']) ? $mysqli->real_escape_string($_GET['pesquisa']) : '';
 
 $sql_base = "FROM estoque e
@@ -16,18 +15,26 @@ if (!empty($termo_pesquisa)) {
     $sql_base .= " WHERE emp.nome LIKE '%$termo_pesquisa%' OR p.nome LIKE '%$termo_pesquisa%'";
 }
 
-// Consulta para contar o total de registros
 $sql_count = "SELECT COUNT(*) as total $sql_base";
 $result_count = $mysqli->query($sql_count);
 $total_registros = $result_count->fetch_assoc()['total'];
 $total_paginas = ceil($total_registros / $itens_por_pagina);
 
-// Consulta para buscar os dados com limite para paginação
 $sql = "SELECT e.id_estoque, emp.nome AS empresa, p.nome AS produto, e.quantidade 
         $sql_base 
         LIMIT $inicio, $itens_por_pagina";
 
 $result = $mysqli->query($sql);
+
+$sql_alerta = "SELECT p.nome, e.quantidade FROM estoque e 
+               JOIN produtos p ON e.id_produto = p.id 
+               WHERE e.quantidade < 3";
+$result_alerta = $mysqli->query($sql_alerta);
+
+$produtos_alerta = [];
+while ($row_alerta = $result_alerta->fetch_assoc()) {
+    $produtos_alerta[] = $row_alerta;
+}
 
 if (!$result) {
     die("Erro na consulta: " . $mysqli->error);
@@ -43,53 +50,15 @@ if (!$result) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .table-spreadsheet {
-            border: 1px solid #dee2e6;
-        }
-        .table-spreadsheet th,
-        .table-spreadsheet td {
-            border: 1px solid #dee2e6;
-            padding: 8px;
-            text-align: center;
-        }
-        .table-spreadsheet th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-        }
-        .sidebar {
-            height: 100vh;
-            width: 250px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: #343a40;
-            padding-top: 20px;
-        }
-        .sidebar a {
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 18px;
-            color: #ffffff;
-            display: block;
-        }
-        .sidebar a:hover {
-            background-color: #495057;
-        }
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-            width: 100%;
+        .low-stock {
+            background-color: #f8d7da !important; /* Vermelho claro */
         }
     </style>
 </head>
 <body>
     <?php include(__DIR__ . '/../sidebar.php'); ?>
 
-    <div class="main-content">
+    <div class="container mt-4">
         <h1>Estoque</h1>
 
         <div class="mb-4">
@@ -120,7 +89,7 @@ if (!$result) {
             </thead>
             <tbody>
                 <?php while ($row = $result->fetch_assoc()): ?>
-                    <tr>
+                    <tr class="<?php echo ($row['quantidade'] < 3) ? 'low-stock' : ''; ?>">
                         <td><?php echo htmlspecialchars($row['id_estoque']); ?></td>
                         <td><?php echo htmlspecialchars($row['empresa']); ?></td>
                         <td><?php echo htmlspecialchars($row['produto']); ?></td>
@@ -144,7 +113,37 @@ if (!$result) {
         </nav>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Modal de alerta -->
+    <?php if (!empty($produtos_alerta)): ?>
+        <div class="modal fade" id="alertaModal" tabindex="-1" aria-labelledby="alertaModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="alertaModalLabel">⚠ Atenção! Baixo estoque</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p>Os seguintes produtos estão com menos de 3 unidades no estoque:</p>
+                        <ul>
+                            <?php foreach ($produtos_alerta as $produto): ?>
+                                <li><strong><?php echo htmlspecialchars($produto['nome']); ?></strong> - Quantidade: <?php echo $produto['quantidade']; ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Exibe o modal automaticamente se houver produtos com baixo estoque
+        <?php if (!empty($produtos_alerta)): ?>
+            var alertaModal = new bootstrap.Modal(document.getElementById('alertaModal'));
+            alertaModal.show();
+        <?php endif; ?>
+    </script>
 </body>
 </html>
