@@ -2,10 +2,30 @@
 session_start();
 include(__DIR__ . '/../config/config.php');
 
+// Consulta corrigida para obter os valores ENUM
+$query_tipo_custo = $mysqli->query("
+    SELECT COLUMN_TYPE
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'manutencao_celular'
+    AND COLUMN_NAME = 'tipo_custo'
+");
+
+if (!$query_tipo_custo) {
+    die("Erro ao consultar tipos de custo: " . $mysqli->error);
+}
+
+$row = $query_tipo_custo->fetch_assoc();
+$enum_values = str_replace(["enum(", ")", "'"], "", $row['COLUMN_TYPE']); // Limpa a string
+$tipos = explode(",", $enum_values);
+
 // Verifica e cria a pasta de uploads se não existir
 $uploadDir = __DIR__ . '/uploads';
 if (!file_exists($uploadDir)) {
-    mkdir($uploadDir, 0777, true);
+    if (!mkdir($uploadDir, 0777, true)) {
+        die("Falha ao criar diretório de uploads");
+    }
+} elseif (!is_writable($uploadDir)) {
+    die("Diretório de uploads não tem permissão de escrita");
 }
 ?>
 
@@ -53,14 +73,14 @@ if (!file_exists($uploadDir)) {
                     <!-- Exibe mensagens de sucesso ou erro -->
                     <?php if (isset($_SESSION['success'])): ?>
                         <div class="alert alert-success">
-                            <?= $_SESSION['success'] ?>
+                            <?= htmlspecialchars($_SESSION['success']) ?>
                         </div>
                         <?php unset($_SESSION['success']); ?>
                     <?php endif; ?>
 
                     <?php if (isset($_SESSION['error'])): ?>
                         <div class="alert alert-danger">
-                            <?= $_SESSION['error'] ?>
+                            <?= htmlspecialchars($_SESSION['error']) ?>
                         </div>
                         <?php unset($_SESSION['error']); ?>
                     <?php endif; ?>
@@ -73,6 +93,10 @@ if (!file_exists($uploadDir)) {
                         <div class="mb-3">
                             <label for="imei" class="form-label">IMEI do Aparelho</label>
                             <input type="text" class="form-control" name="imei" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="responsavel" class="form-label">Responsável</label>
+                            <input type="text" class="form-control" name="responsavel" required>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -89,12 +113,17 @@ if (!file_exists($uploadDir)) {
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="nota_fiscal" class="form-label">Nota Fiscal (Opcional)</label>
-                            <input type="file" class="form-control" name="nota_fiscal" accept=".pdf,.jpg,.png">
+                            <label for="tipo_custo" class="form-label required">Tipo de Custo</label>
+                            <select class="form-select" name="tipo_custo" required>
+                                <option value="">Selecione o Tipo de Custo</option>
+                                <?php foreach ($tipos as $tipo): ?>
+                                    <option value="<?= htmlspecialchars(trim($tipo)) ?>"><?= htmlspecialchars(trim($tipo)) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="mb-3">
-                            <label for="observacao" class="form-label">Observações</label>
-                            <textarea class="form-control" name="observacao" rows="3"></textarea>
+                            <label for="nota_fiscal" class="form-label">Nota Fiscal</label>
+                            <input type="file" class="form-control" name="nota_fiscal" accept=".pdf,.jpg,.png" required>
                         </div>
                         <div class="d-flex justify-content-between">
                             <a href="/centro_de_custos/dashboard/painel.php" class="btn btn-secondary">Voltar</a>
