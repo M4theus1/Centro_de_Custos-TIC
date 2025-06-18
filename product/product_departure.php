@@ -152,6 +152,14 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
                             </select>
                         </div>
 
+                        <!-- Seleção Manual de Lotes -->
+                        <div class="mb-3">
+                            <label class="form-label">Selecionar Lotes Manualmente</label>
+                            <div id="lotes_container" class="border p-2 rounded bg-light">
+                                <p class="text-muted">Selecione o produto e a empresa de origem para listar os lotes disponíveis.</p>
+                            </div>
+                        </div>
+
                         <!-- Setor -->
                         <div class="mb-3">
                             <label for="id_setor" class="form-label required">Setor</label>
@@ -306,6 +314,37 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
         });
     });
     </script>
+    <script>
+    function carregarLotes() {
+        const produtoId = $('select[name="id_produto"]').val();
+        const empresaOrigemId = $('select[name="id_empresa_origem"]').val();
+
+        if (!produtoId || !empresaOrigemId) {
+            $('#lotes_container').html('<p class="text-muted">Selecione o produto e a empresa de origem.</p>');
+            return;
+        }
+
+        $.ajax({
+            url: 'search_for_lots.php',
+            method: 'POST',
+            data: {
+                id_produto: produtoId,
+                id_empresa_origem: empresaOrigemId
+            },
+            success: function(response) {
+                $('#lotes_container').html(response);
+            },
+            error: function() {
+                $('#lotes_container').html('<p class="text-danger">Erro ao buscar lotes.</p>');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $('select[name="id_produto"], select[name="id_empresa_origem"]').on('change', carregarLotes);
+    });
+    </script>
+
     <!-- Modal de Confirmação -->
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
         <div class="modal-dialog">

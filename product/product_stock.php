@@ -141,8 +141,11 @@ if (!$result) {
     <script>
         // Exibe o modal automaticamente se houver produtos com baixo estoque
         <?php if (!empty($produtos_alerta)): ?>
-            var alertaModal = new bootstrap.Modal(document.getElementById('alertaModal'));
-            alertaModal.show();
+            if (!sessionStorage.getItem('alertaExibido')) {
+                var alertaModal = new bootstrap.Modal(document.getElementById('alertaModal'));
+                alertaModal.show();
+                sessionStorage.setItem('alertaExibido', 'true');
+            }
         <?php endif; ?>
     </script>
 </body>
