@@ -169,7 +169,7 @@ $query_fornecedores = $mysqli->query("SELECT id, nome FROM fornecedores WHERE at
                         </div>
                         <div class="d-flex justify-content-between">
                             <a href="/centro_de_custos/dashboard/painel.php" class="btn btn-secondary">Voltar</a>
-                            <button type="submit" class="btn btn-primary">Registrar Entrada</button>
+                            <button type="button" class="btn btn-primary" id="abrirModalEntrada">Registrar Entrada</button>
                         </div>
                     </form>
                 </div>
@@ -188,5 +188,63 @@ $query_fornecedores = $mysqli->query("SELECT id, nome FROM fornecedores WHERE at
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    $(document).ready(function () {
+    $('#abrirModalEntrada').on('click', function () {
+        // Preenche os campos do modal de entrada com os valores do formulário
+        $('#modal_entrada_empresa').text($('select[name="id_empresa"] option:selected').text());
+        $('#modal_entrada_produto').text($('select[name="id_produto"] option:selected').text());
+        $('#modal_entrada_fornecedor').text($('select[name="id_fornecedor"] option:selected').text());
+        $('#modal_entrada_quantidade').text($('#quantidade').val());
+        $('#modal_entrada_valor_unitario').text($('#valor_unitario').val());
+        $('#modal_entrada_frete').text($('#frete').val());
+        $('#modal_entrada_valor_total').text($('#valor_total').val());
+        $('#modal_entrada_data').text($('input[name="data_entrada"]').val());
+        $('#modal_entrada_observacao').text($('textarea[name="observacao"]').val() || 'Sem observações');
+
+        // Exibe o modal
+        $('#entradaModal').modal('show');
+    });
+
+    // Se confirmado, submete o formulário
+    $('#confirmEntrada').on('click', function () {
+        $('form').submit();
+    });
+});
+
+    </script>
+
+    <!-- Modal de Confirmação de Entrada -->
+<div class="modal fade" id="entradaModal" tabindex="-1" aria-labelledby="entradaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="entradaModalLabel">Confirmação da Entrada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <h5 class="text-center">Entrada de Produto</h5>
+                <hr>
+                <p><strong>Empresa:</strong> <span id="modal_entrada_empresa"></span></p>
+                <p><strong>Produto:</strong> <span id="modal_entrada_produto"></span></p>
+                <p><strong>Fornecedor:</strong> <span id="modal_entrada_fornecedor"></span></p>
+                <p><strong>Quantidade:</strong> <span id="modal_entrada_quantidade"></span></p>
+                <p><strong>Valor Unitário:</strong> <span id="modal_entrada_valor_unitario"></span></p>
+                <p><strong>Frete:</strong> <span id="modal_entrada_frete"></span></p>
+                <p><strong>Valor Total:</strong> <span id="modal_entrada_valor_total"></span></p>
+                <p><strong>Data de Entrada:</strong> <span id="modal_entrada_data"></span></p>
+                <p><strong>Observações:</strong> <span id="modal_entrada_observacao"></span></p>
+                <hr>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="confirmEntrada">Confirmar e Registrar</button>
+                <button type="button" class="btn btn-primary" onclick="window.print()">Imprimir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
