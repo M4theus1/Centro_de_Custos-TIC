@@ -315,33 +315,44 @@ $query_estados = $mysqli->query("SELECT id, nome FROM estados");
     });
     </script>
     <script>
-    function carregarLotes() {
-        const produtoId = $('select[name="id_produto"]').val();
-        const empresaOrigemId = $('select[name="id_empresa_origem"]').val();
+    $(document).ready(function () {
+        function carregarLotes() {
+            const produtoId = $('select[name="id_produto"]').val();
+            const empresaOrigemId = $('select[name="id_empresa_origem"]').val();
 
-        if (!produtoId || !empresaOrigemId) {
-            $('#lotes_container').html('<p class="text-muted">Selecione o produto e a empresa de origem.</p>');
-            return;
+            if (!produtoId || !empresaOrigemId) {
+                $('#lotes_container').html('<p class="text-muted">Selecione o produto e a empresa de origem.</p>');
+                return;
+            }
+
+            $.ajax({
+                url: 'search_for_lots.php',
+                method: 'POST',
+                data: {
+                    id_produto: produtoId,
+                    id_empresa_origem: empresaOrigemId
+                },
+                success: function(response) {
+                    $('#lotes_container').html(response);
+                },
+                error: function() {
+                    $('#lotes_container').html('<p class="text-danger">Erro ao buscar lotes.</p>');
+                }
+            });
         }
 
-        $.ajax({
-            url: 'search_for_lots.php',
-            method: 'POST',
-            data: {
-                id_produto: produtoId,
-                id_empresa_origem: empresaOrigemId
-            },
-            success: function(response) {
-                $('#lotes_container').html(response);
-            },
-            error: function() {
-                $('#lotes_container').html('<p class="text-danger">Erro ao buscar lotes.</p>');
-            }
-        });
-    }
-
-    $(document).ready(function () {
+        // Dispara carregamento de lotes ao trocar produto ou empresa
         $('select[name="id_produto"], select[name="id_empresa_origem"]').on('change', carregarLotes);
+
+        // Recalcula quantidade sempre que o usuário altera algum lote
+        $(document).on('input', 'input[name^="lotes"]', function () {
+            let total = 0;
+            $('input[name^="lotes"]').each(function () {
+                let val = parseInt($(this).val()) || 0;
+                total += val;
+            });
+            $('#quantidade').val(total);
+        });
     });
     </script>
 

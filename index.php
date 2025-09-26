@@ -34,6 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $_SESSION['id'] = $usuario['id'];
         $_SESSION['usuario_nome'] = $usuario['nome'];
         $_SESSION['nivel_acesso'] = $usuario['nivel_acesso'];
+        if(isset($_POST['lembrar'])){
+            setcookie('email_salvo', $email, time() + (86400 * 30), "/"); //30 dias
+        } else{
+            setcookie('email_salvo', '', time() - 3600, "/"); //Expira se desmarcado
+        }
         $sucesso = 1; // Login foi bem-sucedido
         $usuario_id = $usuario['id']; // Obtém o ID do usuário autenticado
     } else {
@@ -77,35 +82,56 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <div class="container mt-5">
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+    <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-6">
-                <h1 class="text-center mb-4">Acesse sua conta</h1>
-                <form action="" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">E-mail</label>
-                        <input type="text" name="email" class="form-control" placeholder="Digite seu e-mail" required>
-                    </div>
+            <div class="col-md-5">
+                <div class="card shadow-lg">
+                    <div class="card-body p-4">
+                        <h2 class="text-center text-primary fw-bold mb-3">Centro de Custos TIC</h2>
+                        <h2 class="text-center text-primary fw-bold mb-3">DTEL Telecom</h2>
+                        <h4 class="text-center mb-4">Acesse sua conta</h4>
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">E-mail</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
+                                    <input type="email" name="email" class="form-control" placeholder="Digite seu e-mail" required value="<?php echo isset($_COOKIE['email_salvo']) ? htmlspecialchars($_COOKIE['email_salvo']) : ''; ?>">
+                                </div>
+                            </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Senha</label>
-                        <input type="password" name="senha" class="form-control" placeholder="Digite sua senha" required>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label">Senha</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                                    <input type="password" name="senha" class="form-control" placeholder="Digite sua senha" required>
+                                </div>
+                            </div>
 
-                    <p class="text-end mt-3">
-                        <a href="/centro_de_custos/settings/user_forgot_pass.php">Esqueci minha senha</a>
-                    </p>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="lembrar" id="lembrar" <?php echo isset($_COOKIE['email_salvo']) ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="lembrar">
+                                    Lembrar de mim
+                                </label>
+                            </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Entrar</button>
+                            <div class="text-end mb-3">
+                                <a href="/centro_de_custos/settings/user_forgot_pass.php" class="small">Esqueci minha senha</a>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">Entrar</button>
+                            </div>
+                        </form>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JavaScript Bundle with Popper -->
+    <!-- Bootstrap Bundle + ícones -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </body>
+
 </html>
