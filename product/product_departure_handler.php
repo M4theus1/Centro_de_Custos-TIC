@@ -4,20 +4,19 @@ include(__DIR__ . '/../config/config.php');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Dados do formulário
-    $id_empresa_origem = $_POST['id_empresa_origem'];
-    $id_empresa_destino = $_POST['id_empresa_destino'] ?? null;
-    $id_produto = $_POST['id_produto'];
-    $id_setor = $_POST['id_setor'];
-    $responsavel = $_POST['responsavel'];
-    $quantidade = $_POST['quantidade'];
-    $data_saida = $_POST['data_saida'];
-    $numero_ticket = $_POST['numero_ticket'];
-    $id_cidade = $_POST['id_cidade'];
-    $id_estado = $_POST['id_estado'];
-    $observacao = $_POST['observacao'];
-    $lotesSelecionados = $_POST['lotes'] ?? [];
-    $id_empresa_saida = $id_empresa_destino ?: $id_empresa_origem;
-
+    $id_empresa_origem   = $_POST['id_empresa_origem'];
+    $id_empresa_destino  = $_POST['id_empresa_destino'] ?? null;
+    $id_produto          = $_POST['id_produto'];
+    $id_setor            = $_POST['id_setor'];
+    $responsavel         = $_POST['responsavel'];
+    $quantidade          = $_POST['quantidade'];
+    $data_saida          = $_POST['data_saida'];
+    $numero_ticket       = $_POST['numero_ticket'];
+    $id_cidade           = $_POST['id_cidade'];
+    $id_estado           = $_POST['id_estado'];
+    $observacao          = $_POST['observacao'];
+    $lotesSelecionados   = $_POST['lotes'] ?? [];
+    $id_empresa_saida    = $id_empresa_destino ?: $id_empresa_origem;
 
     // Validação de campos obrigatórios
     if (
@@ -64,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($qtd_retirada <= 0) continue;
 
             // Consulta o lote
-            $stmt = $mysqli->prepare("SELECT quantidade, valor_unitario FROM entrada_produto WHERE id_entrada = ? AND id_empresa = ? AND id_produto = ?");
+            $stmt = $mysqli->prepare("SELECT quantidade, valor_unitario 
+                                      FROM entrada_produto 
+                                      WHERE id_entrada = ? AND id_empresa = ? AND id_produto = ?");
             $stmt->bind_param('iii', $id_lote, $id_empresa_origem, $id_produto);
             $stmt->execute();
             $stmt->store_result();
@@ -92,6 +93,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt_mov->execute();
             $stmt_mov->close();
 
+            // Valida e formata a data
+            if (!empty($_POST['data_saida'])) {
+                $data_saida = $_POST['data_saida'];
+            } else {
+                $data_saida = date('Y-m-d'); // fallback: data atual
+            }
+
+            // Valida se a data está no formato correto
+            if (!DateTime::createFromFormat('Y-m-d', $data_saida)) {
+                throw new Exception('Formato de data inválido! Use Y-m-d.');
+            }
+
+            // Registra saída de produto por lote
+            $stmt_saida = $mysqli->prepare("INSERT INTO saida_produto 
+                (id_empresa, id_produto, id_setor, responsavel, quantidade, valor_unitario, id_lote, data_saida, numero_ticket, id_cidade, id_estado, observacao) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_saida->bind_param(
+                'iiisidissssi',
+                $id_empresa_saida,
+                $id_produto,
+                $id_setor,
+                $responsavel,
+                $qtd_retirada,
+                $preco_unitario,
+                $id_lote,
+                $data_saida,
+                $numero_ticket,
+                $id_cidade,
+                $id_estado,
+                $observacao
+            );
+            $stmt_saida->execute();
+            $stmt_saida->close();
 
             $totalRetirar += $qtd_retirada;
         }
@@ -115,15 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt_update->close();
         }
         $stmt->close();
-
-        // Registra a saída de produto
-        $stmt_saida = $mysqli->prepare("INSERT INTO saida_produto 
-            (id_empresa, id_produto, id_setor, responsavel, quantidade, data_saida, numero_ticket, id_cidade, id_estado, observacao) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt_saida->bind_param('iiisisssss', $id_empresa_saida, $id_produto, $id_setor, $responsavel, $totalRetirar, $data_saida, $numero_ticket, $id_cidade, $id_estado, $observacao);
-        $stmt_saida->execute();
-        $stmt_saida->close();
-
 
         // Registra transferência (se aplicável)
         if ($id_empresa_destino) {

@@ -11,30 +11,25 @@ $pagina_atual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
 $offset = ($pagina_atual - 1) * $registros_por_pagina;
 
 // Consulta SQL base
-    $sql = "SELECT s.id_saida, 
-                emp.nome AS empresa, 
-                p.nome AS produto, 
-                (SELECT ep.valor_unitario 
-                FROM entrada_produto ep 
-                WHERE ep.id_produto = s.id_produto 
-                ORDER BY ep.id_entrada ASC  -- Obtém o primeiro valor registrado
-                LIMIT 1) AS valor_unitario,  
-                setr.nome AS setor, 
-                s.responsavel, 
-                s.quantidade, 
-                s.data_saida, 
-                s.numero_ticket, 
-                c.nome AS cidade, 
-                e.nome AS estado, 
-                s.observacao
-            FROM saida_produto s
-            JOIN empresas emp ON s.id_empresa = emp.id
-            JOIN produtos p ON s.id_produto = p.id
-            JOIN setores setr ON s.id_setor = setr.id
-            JOIN cidades c ON s.id_cidade = c.id
-            JOIN estados e ON s.id_estado = e.id
-            WHERE 1=1";
-
+$sql = "SELECT s.id_saida, 
+            emp.nome AS empresa, 
+            p.nome AS produto, 
+            s.valor_unitario,
+            setr.nome AS setor, 
+            s.responsavel, 
+            s.quantidade, 
+            s.data_saida, 
+            s.numero_ticket, 
+            c.nome AS cidade, 
+            e.nome AS estado, 
+            s.observacao
+        FROM saida_produto s
+        JOIN empresas emp ON s.id_empresa = emp.id
+        JOIN produtos p ON s.id_produto = p.id
+        JOIN setores setr ON s.id_setor = setr.id
+        JOIN cidades c ON s.id_cidade = c.id
+        JOIN estados e ON s.id_estado = e.id
+        WHERE 1=1";
 
 $params = [];
 $types = "";
@@ -97,13 +92,7 @@ $total_paginas = max(1, ceil($total_registros / $registros_por_pagina));
 // Consulta para calcular o valor total de saídas por mês
 $sql_total_mes = "SELECT 
                     DATE_FORMAT(s.data_saida, '%Y-%m') AS mes, 
-                    SUM(s.quantidade * (
-                        SELECT ep.valor_unitario 
-                        FROM entrada_produto ep 
-                        WHERE ep.id_produto = s.id_produto 
-                        ORDER BY ep.id_entrada DESC 
-                        LIMIT 1
-                    )) AS total_mes
+                    SUM(s.quantidade * s.valor_unitario) AS total_mes
                   FROM saida_produto s
                   WHERE 1=1";
 
@@ -127,8 +116,8 @@ if (!empty($data_inicio) && !empty($data_fim)) {
 
 $stmt_total_mes->execute();
 $result_total_mes = $stmt_total_mes->get_result();
-
 ?>
+
 
 <!DOCTYPE html>
 <html lang="pt-br">
