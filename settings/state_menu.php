@@ -1,17 +1,16 @@
 <?php
 include(__DIR__ . '/../config/config.php');
 
-// Definir o limite de itens por página
+$nome = $_SESSION['usuario_nome'] ?? 'Usuário';
+$partes = explode(' ', trim($nome));
+$iniciais = strtoupper(substr($partes[0], 0, 1) . (isset($partes[1]) ? substr($partes[1], 0, 1) : ''));
+$primeiro_nome = $partes[0];
+
 define('LIMITE_ESTADOS', 10);
-
-// Obter o número da página atual
 $pagina = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
-
-// Calcular o deslocamento
 $offset = ($pagina - 1) * LIMITE_ESTADOS;
 
 try {
-    // Consulta para contar o total de estados
     $sqlTotal = "SELECT COUNT(*) AS total FROM estados WHERE ativo = 1";
     $stmtTotal = $mysqli->prepare($sqlTotal);
     if (!$stmtTotal->execute()) {
@@ -20,133 +19,111 @@ try {
     $resultTotal = $stmtTotal->get_result();
     $totalEstados = $resultTotal->fetch_assoc()['total'];
 
-    // Consulta para buscar os estados com paginação
     $sql = "SELECT * FROM estados WHERE ativo = 1 LIMIT ? OFFSET ?";
     $stmt = $mysqli->prepare($sql);
-
-    // Variáveis temporárias para o bind_param
     $limiteEstados = LIMITE_ESTADOS;
     $stmt->bind_param('ii', $limiteEstados, $offset);
-
     if (!$stmt->execute()) {
         throw new Exception("Erro ao buscar estados: " . $mysqli->error);
     }
     $result = $stmt->get_result();
 
-    // Calcular o total de páginas
     $totalPaginas = ceil($totalEstados / LIMITE_ESTADOS);
 } catch (Exception $e) {
-    error_log("Erro: " . $e->getMessage()); // Registrar erro no log
+    error_log("Erro: " . $e->getMessage());
     die("Ocorreu um erro. Por favor, tente novamente mais tarde.");
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Lista de Estados</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-        }
-        .sidebar {
-            height: 100vh;
-            width: 250px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: #343a40;
-            padding-top: 20px;
-        }
-        .sidebar a {
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 18px;
-            color: #ffffff;
-            display: block;
-        }
-        .sidebar a:hover {
-            background-color: #495057;
-        }
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-            width: 100%;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estados</title>
+    <link rel="stylesheet" href="/centro_de_custos/assets/sistema.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-    <!-- Sidebar -->
     <?php include(__DIR__ . '/../sidebar.php'); ?>
 
-    <div class="main-content">
-        <div class="container mt-5">
-            <h2 class="mb-4">Lista de Estados</h2>
-            <a href="state_create.php" class="btn btn-success mb-3">Adicionar Novo Estado</a>
-            <table class="table table-striped">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Sigla</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($result->num_rows > 0): ?>
-                        <?php while ($row = $result->fetch_assoc()): ?>
-                            <tr>
-                                <td><?php echo $row['id']; ?></td>
-                                <td><?php echo htmlspecialchars($row['nome']); ?></td>
-                                <td><?php echo htmlspecialchars($row['sigla']); ?></td>
-                                <td>
-                                    <a href="state_edit.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-primary">Editar</a>
-                                    <a href="state_delete.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja excluir?');">Desativar</a>
-                                </td>
-                            </tr>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4" class="text-center">Nenhum estado encontrado.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-
-            <!-- Paginação -->
-            <nav>
-                <ul class="pagination justify-content-center">
-                    <li class="page-item <?php if ($pagina <= 1) echo 'disabled'; ?>">
-                        <a class="page-link" href="?pagina=<?php echo $pagina - 1; ?>" aria-label="Anterior">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                    </li>
-
-                    <?php for ($i = 1; $i <= $totalPaginas; $i++): ?>
-                        <li class="page-item <?php if ($pagina == $i) echo 'active'; ?>">
-                            <a class="page-link" href="?pagina=<?php echo $i; ?>"><?php echo $i; ?></a>
-                        </li>
-                    <?php endfor; ?>
-
-                    <li class="page-item <?php if ($pagina >= $totalPaginas) echo 'disabled'; ?>">
-                        <a class="page-link" href="?pagina=<?php echo $pagina + 1; ?>" aria-label="Próximo">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                </ul>
+    <div class="main">
+        <header class="topbar">
+            <nav class="topbar-breadcrumb">
+                <a href="/centro_de_custos/dashboard/painel.php">Início</a>
+                <span>/</span>
+                <span>Configurações</span>
+                <span>/</span>
+                <span class="current">Estados</span>
             </nav>
+            <div class="topbar-right">
+                <span class="topbar-username"><?= htmlspecialchars($primeiro_nome, ENT_QUOTES, 'UTF-8') ?></span>
+                <div class="topbar-avatar"><?= htmlspecialchars($iniciais, ENT_QUOTES, 'UTF-8') ?></div>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <span class="page-eyebrow">Configurações</span>
+                    <h1 class="page-title"><strong>Lista de</strong> Estados</h1>
+                </div>
+                <div class="page-header-actions">
+                    <a href="state_create.php" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Novo Estado
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-wrap" style="border:none;border-radius:0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Sigla</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ($result->num_rows > 0): ?>
+                                <?php while ($row = $result->fetch_assoc()): ?>
+                                    <tr>
+                                        <td class="td-id"><?= $row['id'] ?></td>
+                                        <td class="td-name"><?= htmlspecialchars($row['nome']) ?></td>
+                                        <td><?= htmlspecialchars($row['sigla']) ?></td>
+                                        <td class="td-actions">
+                                            <div class="td-actions-wrap">
+                                                <a href="state_edit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
+                                                <a href="state_delete.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja desativar?')">Desativar</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="4" class="table-empty">
+                                        <i class="fas fa-map"></i>
+                                        <p>Nenhum estado encontrado.</p>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <?php if ($totalPaginas > 1): ?>
+            <div class="pagination">
+                <a href="?pagina=<?= $pagina - 1 ?>" class="page-btn <?= $pagina <= 1 ? 'disabled' : '' ?>">&laquo;</a>
+                <?php for ($i = 1; $i <= $totalPaginas; $i++): ?>
+                    <a href="?pagina=<?= $i ?>" class="page-btn <?= $pagina == $i ? 'active' : '' ?>"><?= $i ?></a>
+                <?php endfor; ?>
+                <a href="?pagina=<?= $pagina + 1 ?>" class="page-btn <?= $pagina >= $totalPaginas ? 'disabled' : '' ?>">&raquo;</a>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
-
-    <!-- jQuery e Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
 <?php $mysqli->close(); ?>

@@ -6,39 +6,74 @@ header('Content-Disposition: attachment; filename="relatorio_saidas.csv"');
 
 $output = fopen('php://output', 'w');
 
-// Cabeçalho do CSV
-fputcsv($output, ['Empresa', 'Produto', 'Valor Unitario', 'Setor', 'Responsavel', 'Quantidade', 'Data Saida', 'Numero Ticket', 'Cidade', 'Estado', 'Observacao'], ';');
+fputcsv($output, [
+    'Empresa', 'Produto', 'Valor Unitario', 'Setor', 'Responsavel',
+    'Quantidade', 'Tipo de Custo', 'Data Entrada', 'Data Saida',
+    'Numero Ticket', 'Cidade', 'Estado', 'Observacao'
+], ';');
 
-// Consulta SQL para obter os dados
-$sql = "SELECT emp.nome AS empresa, 
-       p.nome AS produto, 
-       ep.valor_unitario,  
-       setr.nome AS setor, 
-       s.responsavel, 
-       s.quantidade, 
-       s.data_saida, 
-       s.numero_ticket, 
-       c.nome AS cidade, 
-       e.nome AS estado, 
-       s.observacao
-FROM saida_produto s
-JOIN empresas emp ON s.id_empresa = emp.id
-JOIN produtos p ON s.id_produto = p.id
-JOIN (
-    SELECT ep1.*
-    FROM entrada_produto ep1
-    INNER JOIN (
-        SELECT id_produto, MAX(data_entrada) AS max_data
-        FROM entrada_produto
-        GROUP BY id_produto
-    ) latest ON ep1.id_produto = latest.id_produto 
-            AND ep1.data_entrada = latest.max_data
-) ep ON s.id_produto = ep.id_produto
-JOIN setores setr ON s.id_setor = setr.id
-JOIN cidades c ON s.id_cidade = c.id
-JOIN estados e ON s.id_estado = e.id;";
+$data_inicio = $_GET['data_inicio'] ?? '';
+$data_fim    = $_GET['data_fim']    ?? '';
+$empresa     = $_GET['empresa']     ?? '';
+$produto     = $_GET['produto']     ?? '';
+$tipo_custo  = $_GET['tipo_custo']  ?? '';
+$setor       = $_GET['setor']       ?? '';
+$responsavel = $_GET['responsavel'] ?? '';
 
-$result = $mysqli->query($sql);
+$sql = "SELECT emp.nome AS empresa, p.nome AS produto, ep.valor_unitario,
+               setr.nome AS setor, s.responsavel, s.quantidade, s.tipo_custo,
+               ep.data_entrada, s.data_saida, s.numero_ticket,
+               c.nome AS cidade, e.nome AS estado, s.observacao
+        FROM saida_produto s
+        JOIN empresas emp         ON s.id_empresa = emp.id
+        JOIN produtos p           ON s.id_produto = p.id
+        LEFT JOIN entrada_produto ep ON s.id_lote = ep.id_entrada
+        JOIN setores setr         ON s.id_setor   = setr.id
+        JOIN cidades c            ON s.id_cidade  = c.id
+        JOIN estados e            ON s.id_estado  = e.id
+        WHERE 1=1";
+
+$params = [];
+$types  = '';
+
+if (!empty($data_inicio) && !empty($data_fim)) {
+    $sql      .= " AND s.data_saida BETWEEN ? AND ?";
+    $params[]  = $data_inicio;
+    $params[]  = $data_fim;
+    $types    .= 'ss';
+}
+if (!empty($empresa)) {
+    $sql      .= " AND emp.nome LIKE ?";
+    $params[]  = '%' . $empresa . '%';
+    $types    .= 's';
+}
+if (!empty($produto)) {
+    $sql      .= " AND p.nome LIKE ?";
+    $params[]  = '%' . $produto . '%';
+    $types    .= 's';
+}
+if (!empty($tipo_custo)) {
+    $sql      .= " AND s.tipo_custo = ?";
+    $params[]  = $tipo_custo;
+    $types    .= 's';
+}
+if (!empty($setor)) {
+    $sql      .= " AND setr.nome LIKE ?";
+    $params[]  = '%' . $setor . '%';
+    $types    .= 's';
+}
+if (!empty($responsavel)) {
+    $sql      .= " AND s.responsavel LIKE ?";
+    $params[]  = '%' . $responsavel . '%';
+    $types    .= 's';
+}
+
+$sql .= " ORDER BY s.data_saida DESC";
+
+$stmt = $mysqli->prepare($sql);
+if (!empty($params)) $stmt->bind_param($types, ...$params);
+$stmt->execute();
+$result = $stmt->get_result();
 
 while ($row = $result->fetch_assoc()) {
     fputcsv($output, [
@@ -48,7 +83,9 @@ while ($row = $result->fetch_assoc()) {
         $row['setor'],
         $row['responsavel'],
         $row['quantidade'],
-        date('d/m/Y', strtotime($row['data_saida'])),
+        $row['tipo_custo'],
+        !empty($row['data_entrada']) ? date('d/m/Y', strtotime($row['data_entrada'])) : '',
+        !empty($row['data_saida'])   ? date('d/m/Y', strtotime($row['data_saida']))   : '',
         $row['numero_ticket'],
         $row['cidade'],
         $row['estado'],
@@ -58,4 +95,3 @@ while ($row = $result->fetch_assoc()) {
 
 fclose($output);
 exit;
-?>

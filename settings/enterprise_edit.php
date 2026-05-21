@@ -1,108 +1,132 @@
-<?php 
+<?php
+session_start();
 include(__DIR__ . '/../config/config.php');
 
-// Verifica se o ID foi passado na URL
-if (!isset($_GET['id']) || empty($_GET['id'])) {
-    die('ID da empresa não fornecido.');
+$nome_usuario = $_SESSION['usuario_nome'] ?? 'Usuário';
+$partes   = explode(' ', trim($nome_usuario));
+$iniciais = strtoupper(substr($partes[0], 0, 1) . (isset($partes[1]) ? substr($partes[1], 0, 1) : ''));
+$primeiro_nome = $partes[0];
+
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+if (!$id) {
+    header("Location: enterprise_menu.php");
+    exit();
 }
 
-$id = intval($_GET['id']);
+$erro = '';
 
-// Busca a empresa pelo ID
-$sql_code = "SELECT * FROM empresas WHERE id = $id";
-$result = $mysqli->query($sql_code);
+$stmt = $mysqli->prepare("SELECT * FROM empresas WHERE id = ?");
+$stmt->bind_param('i', $id);
+$stmt->execute();
+$empresa = $stmt->get_result()->fetch_assoc();
 
-if ($result->num_rows == 0) {
-    die('Empresa não encontrada.');
+if (!$empresa) {
+    header("Location: enterprise_menu.php");
+    exit();
 }
 
-$empresa = $result->fetch_assoc();
+function formatarCNPJ($cnpj) {
+    return preg_replace("/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/", "$1.$2.$3/$4-$5", $cnpj);
+}
 
-// Atualiza os dados da empresa se o formulário for enviado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nome = $mysqli->real_escape_string($_POST['nome']);
-    $cnpj = preg_replace('/\D/', '', $_POST['cnpj']); // Remove a máscara do CNPJ
+    $nome = trim($_POST['nome'] ?? '');
+    $cnpj = preg_replace('/\D/', '', $_POST['cnpj'] ?? '');
 
     if (empty($nome) || empty($cnpj)) {
-        $error = 'Por favor, preencha todos os campos.';
+        $erro = 'Por favor, preencha todos os campos.';
     } else {
-        $update_query = "UPDATE empresas SET nome = '$nome', cnpj_empresa = '$cnpj' WHERE id = $id";
-
-        if ($mysqli->query($update_query)) {
-            header('Location: enterprise.php');
-            exit;
+        $stmt_up = $mysqli->prepare("UPDATE empresas SET nome = ?, cnpj_empresa = ? WHERE id = ?");
+        $stmt_up->bind_param('ssi', $nome, $cnpj, $id);
+        if ($stmt_up->execute()) {
+            $_SESSION['mensagem'] = 'Empresa atualizada com sucesso!';
+            header("Location: enterprise_menu.php");
+            exit();
         } else {
-            $error = 'Erro ao atualizar a empresa: ' . $mysqli->error;
+            $erro = 'Erro ao atualizar empresa: ' . $mysqli->error;
         }
     }
 }
-
-/**
- * Função para formatar o CNPJ.
- * Exemplo: 12345678000199 -> 12.345.678/0001-99
- */
-function formatarCNPJ($cnpj) {
-    return preg_replace(
-        "/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/",
-        "$1.$2.$3/$4-$5",
-        $cnpj
-    );
-}
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Empresa</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="/centro_de_custos/assets/sistema.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-    <div class="container mt-5">
-        <h2>Editar Empresa</h2>
+    <?php include(__DIR__ . '/../sidebar.php'); ?>
 
-        <?php if (isset($error)): ?>
-            <div class="alert alert-danger"><?php echo $error; ?></div>
-        <?php endif; ?>
+    <div class="main">
+        <header class="topbar">
+            <nav class="topbar-breadcrumb">
+                <a href="/centro_de_custos/dashboard/painel.php">Início</a>
+                <span>/</span>
+                <a href="/centro_de_custos/settings/enterprise_menu.php">Empresas</a>
+                <span>/</span>
+                <span class="current">Editar</span>
+            </nav>
+            <div class="topbar-right">
+                <span class="topbar-username"><?= htmlspecialchars($primeiro_nome, ENT_QUOTES, 'UTF-8') ?></span>
+                <div class="topbar-avatar"><?= htmlspecialchars($iniciais, ENT_QUOTES, 'UTF-8') ?></div>
+            </div>
+        </header>
 
-        <form action="" method="POST">
-            <div class="form-group">
-                <label for="nome">Nome</label>
-                <input type="text" class="form-control" id="nome" name="nome" value="<?php echo htmlspecialchars($empresa['nome']); ?>" required>
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <span class="page-eyebrow">Configurações</span>
+                    <h1 class="page-title"><strong>Editar</strong> Empresa</h1>
+                </div>
+                <a href="enterprise_menu.php" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
             </div>
 
-            <div class="form-group">
-                <label for="cnpj">CNPJ</label>
-                <input type="text" class="form-control" id="cnpj" name="cnpj" value="<?php echo formatarCNPJ($empresa['cnpj_empresa']); ?>" required maxlength="18">
-            </div>
+            <?php if ($erro): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?= htmlspecialchars($erro, ENT_QUOTES, 'UTF-8') ?>
+                </div>
+            <?php endif; ?>
 
-            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-            <a href="enterprise_menu.php" class="btn btn-secondary">Cancelar</a>
-        </form>
+            <div class="card" style="max-width:560px;margin:0 auto;">
+                <div class="card-header">
+                    <span class="card-header-title"><i class="fas fa-building"></i> Dados da Empresa</span>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        <div class="form-group">
+                            <label class="form-label">Nome da Empresa <span class="form-required">*</span></label>
+                            <input type="text" class="form-control" name="nome" required
+                                   value="<?= htmlspecialchars($empresa['nome'], ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CNPJ <span class="form-required">*</span></label>
+                            <input type="text" class="form-control" name="cnpj" id="cnpj"
+                                   maxlength="18" required
+                                   value="<?= htmlspecialchars(formatarCNPJ($empresa['cnpj_empresa']), ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                        <div class="form-footer">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Salvar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <script>
-        $(document).ready(function () {
-            $('#cnpj').on('input', function () {
-                let cnpj = $(this).val().replace(/\D/g, '');
-                if (cnpj.length > 14) {
-                    cnpj = cnpj.substring(0, 14);
-                }
-
-                cnpj = cnpj.replace(/^(\d{2})(\d)/, '$1.$2');
-                cnpj = cnpj.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                cnpj = cnpj.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                cnpj = cnpj.replace(/(\d{4})(\d)/, '$1-$2');
-
-                $(this).val(cnpj);
-            });
-        });
+    $(document).ready(function () {
+        $('#cnpj').mask('00.000.000/0000-00');
+    });
     </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-<?php $mysqli->close(); ?>

@@ -6,6 +6,6 @@
 
     $mysqli = new mysqli($host, $usuario, $senha, $database);
 
-    if($mysqli -> error){
-        die("Falha ao conectar ao Banco de Dados: " . $mysqli.error);
+    if($mysqli -> connect_error){
+        die("Falha ao conectar ao Banco de Dados: " . $mysqli->connect_error);
     }

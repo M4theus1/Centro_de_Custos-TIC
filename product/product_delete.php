@@ -1,6 +1,12 @@
 <?php
 include(__DIR__ . '/../config/config.php');
 
+// Iniciais do nome do usuário para o avatar
+$nome = $_SESSION['usuario_nome'] ?? 'Usuário';
+$partes = explode(' ', trim($nome));
+$iniciais = strtoupper(substr($partes[0], 0, 1) . (isset($partes[1]) ? substr($partes[1], 0, 1) : ''));
+$primeiro_nome = $partes[0];
+
 // Verifica se o ID foi passado na URL
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     die('ID do produto não fornecido.');

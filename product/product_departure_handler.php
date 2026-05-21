@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id_setor            = $_POST['id_setor'];
     $responsavel         = $_POST['responsavel'];
     $quantidade          = $_POST['quantidade'];
+    $tipo_custo          = $_POST['tipo_custo'];
     $data_saida          = $_POST['data_saida'];
     $numero_ticket       = $_POST['numero_ticket'];
     $id_cidade           = $_POST['id_cidade'];
@@ -56,6 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt->close();
         }
 
+        // Valida formato da data uma única vez, antes do loop
+        if (!DateTime::createFromFormat('Y-m-d', $data_saida)) {
+            throw new Exception('Formato de data inválido! Use Y-m-d.');
+        }
+
         $totalRetirar = 0;
 
         foreach ($lotesSelecionados as $id_lote => $qtd_retirada) {
@@ -87,45 +93,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             // Registra movimentação
             $stmt_mov = $mysqli->prepare("INSERT INTO estoque_movimento 
-                (id_produto, tipo, id_origem, quantidade, valor_unitario, data_movimento) 
-                VALUES (?, 'saida', ?, ?, ?, CURDATE())");
-            $stmt_mov->bind_param('iiid', $id_produto, $id_empresa_origem, $qtd_retirada, $preco_unitario);
+                (id_produto, tipo, id_origem, quantidade, data_movimento) 
+                VALUES (?, 'saida', ?, ?, CURDATE())");
+            $stmt_mov->bind_param('iid', $id_produto, $id_empresa_origem, $qtd_retirada);
             $stmt_mov->execute();
             $stmt_mov->close();
 
-            // Valida e formata a data
-            if (!empty($_POST['data_saida'])) {
-                $data_saida = $_POST['data_saida'];
-            } else {
-                $data_saida = date('Y-m-d'); // fallback: data atual
-            }
-
-            // Valida se a data está no formato correto
-            if (!DateTime::createFromFormat('Y-m-d', $data_saida)) {
-                throw new Exception('Formato de data inválido! Use Y-m-d.');
-            }
-
             // Registra saída de produto por lote
             $stmt_saida = $mysqli->prepare("INSERT INTO saida_produto 
-                (id_empresa, id_produto, id_setor, responsavel, quantidade, valor_unitario, id_lote, data_saida, numero_ticket, id_cidade, id_estado, observacao) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                (id_empresa, id_produto, id_setor, responsavel, quantidade, valor_unitario, tipo_custo, id_lote, data_saida, numero_ticket, id_cidade, id_estado, observacao) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt_saida->bind_param(
-                'iiisidissssi',
-                $id_empresa_saida,
-                $id_produto,
-                $id_setor,
-                $responsavel,
-                $qtd_retirada,
-                $preco_unitario,
-                $id_lote,
-                $data_saida,
-                $numero_ticket,
-                $id_cidade,
-                $id_estado,
-                $observacao
+                'iiisddsissiis',
+                $id_empresa_saida,   // i
+                $id_produto,         // i
+                $id_setor,           // i
+                $responsavel,        // s
+                $qtd_retirada,       // d (double)
+                $preco_unitario,     // d (double)
+                $tipo_custo,         // s (string, não i)
+                $id_lote,            // i
+                $data_saida,         // s
+                $numero_ticket,      // s
+                $id_cidade,          // i
+                $id_estado,          // i
+                $observacao          // s
             );
+
             $stmt_saida->execute();
             $stmt_saida->close();
+
 
             $totalRetirar += $qtd_retirada;
         }
@@ -143,10 +140,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt->bind_result($quantidade_origem);
             $stmt->fetch();
             $nova_quantidade_origem = $quantidade_origem - $totalRetirar;
+            if ($nova_quantidade_origem < 0) {
+                throw new Exception("Estoque insuficiente para a empresa selecionada!");
+            }
             $stmt_update = $mysqli->prepare("UPDATE estoque SET quantidade = ? WHERE id_empresa = ? AND id_produto = ?");
             $stmt_update->bind_param('dii', $nova_quantidade_origem, $id_empresa_origem, $id_produto);
             $stmt_update->execute();
             $stmt_update->close();
+        } else {
+            throw new Exception("Registro de estoque não encontrado para o produto e empresa selecionados!");
         }
         $stmt->close();
 
