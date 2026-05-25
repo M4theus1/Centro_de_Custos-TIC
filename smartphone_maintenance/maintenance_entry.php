@@ -82,7 +82,7 @@ if (!file_exists($uploadDir)) {
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
-            <div class="card" style="max-width:760px;">
+            <div class="card" style="max-width:760px;margin:0 auto;">
                 <div class="card-body">
                     <form method="POST" action="maintenance_entry_form.php" enctype="multipart/form-data">
                         <div class="form-group">

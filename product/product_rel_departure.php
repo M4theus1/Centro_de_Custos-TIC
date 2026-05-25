@@ -220,10 +220,33 @@ $result_total_mes = $stmt_total_mes->get_result();
 
         @media (max-width: 900px) {
             .chart-section { grid-template-columns: 1fr; }
+            .page-header { flex-wrap: wrap; gap: 12px; }
+            .page-header-actions { width: 100%; display: flex; gap: 8px; }
+            .page-header-actions .btn { flex: 1; justify-content: center; }
+            .filter-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+            .filter-grid { grid-template-columns: 1fr; }
+            .filter-actions { flex-direction: column; }
+            .filter-actions .btn { width: 100%; justify-content: center; }
+            .table-card-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .dataTables_wrapper .dataTables_filter,
+            .dataTables_wrapper .dataTables_length { display: block; width: 100%; margin-bottom: 8px; }
+            .dataTables_wrapper .dataTables_filter input { width: 100%; margin: 6px 0 0 0; box-sizing: border-box; }
+            .dataTables_wrapper .dataTables_paginate { text-align: center; }
         }
     </style>
 </head>
 <body>
+<div class="mobile-bar">
+    <button class="hamburger" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <span style="font-size:14px;font-weight:500">Rel. Saídas</span>
+    <span></span>
+</div>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
     <?php include(__DIR__ . '/../sidebar.php'); ?>
 
     <div class="main">
@@ -478,6 +501,11 @@ $result_total_mes = $stmt_total_mes->get_result();
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('overlay').classList.toggle('open');
+    }
+
     $(document).ready(function () {
         // DataTable
         $('#dataTable').DataTable({

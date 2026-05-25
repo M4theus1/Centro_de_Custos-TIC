@@ -177,10 +177,18 @@ $total_paginas   = ceil($total_registros / $registros_por_pagina);
 
     @media (max-width: 900px) {
       .main { padding: 72px 20px 40px; }
-      .stats-row  { grid-template-columns: 1fr 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .page-header { flex-wrap: wrap; gap: 12px; }
+      .btn-export { width: 100%; justify-content: center; }
+      .filter-row { flex-direction: column; }
+      .filter-field { min-width: 0; width: 100%; }
+      .filter-actions { width: 100%; }
+      .filter-actions .btn { flex: 1; justify-content: center; }
     }
     @media (max-width: 600px) {
       .stats-row { grid-template-columns: 1fr; }
+      .table-card-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .pagination-wrap { flex-wrap: wrap; justify-content: center; }
     }
   </style>
 </head>
